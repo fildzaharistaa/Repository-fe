@@ -94,7 +94,7 @@ export function PermissionManagement() {
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Permission Management</h2>
+        <h2 className="text-2xl font-bold text-black">Permission Management</h2>
         <button
           onClick={() => setShowCreateDialog(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"

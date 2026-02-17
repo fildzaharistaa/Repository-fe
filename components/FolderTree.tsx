@@ -181,8 +181,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           <Image src="/upnvj.png" alt="Campus Repository" width={40} height={40} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-blue-600">Campus Repository</h2>
-            <p className="text-xs text-blue-500">File Management System</p>
+            <h2 className="text-base font-bold text-orange-600">Campus Repository</h2>
+            <p className="text-xs text-orange-500">File Management System</p>
           </div>
         </div>
       </div>
@@ -198,11 +198,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             }}
             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
               activeMenu === 'dashboard' || (pathname === '/dashboard' && selectedFolderId === null && activeMenu === null)
-                ? 'bg-blue-100 text-blue-700 font-semibold'
+                ? 'bg-orange-100 text-orange-700 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <LayoutDashboard className="h-5 w-5" />
+            <LayoutDashboard className="h-5 w-5 text-orange-600" />
             <span>Dashboard</span>
           </button>
           <button
@@ -213,11 +213,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             }}
             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
               activeMenu === 'all-folders'
-                ? 'bg-blue-100 text-blue-700 font-semibold'
+                ? 'bg-orange-100 text-orange-700 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <Folder className="h-5 w-5" />
+            <Folder className="h-5 w-5 text-orange-600" />
             <span>All Folders</span>
           </button>
           <button
@@ -229,11 +229,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             }}
             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
               activeMenu === 'recent-files'
-                ? 'bg-blue-100 text-blue-700 font-semibold'
+                ? 'bg-orange-100 text-orange-700 font-semibold'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <Clock className="h-5 w-5" />
+            <Clock className="h-5 w-5 text-orange-600" />
             <span>Recent Files</span>
           </button>
           {isAdmin && (
@@ -246,22 +246,22 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 onClick={() => router.push('/users')}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                   pathname === '/users'
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Users className="h-5 w-5" />
+                <Users className="h-5 w-5 text-orange-600" />
                 <span>Users</span>
               </button>
               <button
                 onClick={() => router.push('/permissions')}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                   pathname === '/permissions'
-                    ? 'bg-blue-100 text-blue-700 font-semibold'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Lock className="h-5 w-5" />
+                <Lock className="h-5 w-5 text-orange-600" />
                 <span>Permissions</span>
               </button>
             </>
@@ -292,7 +292,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         )}
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
+          className="w-full rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
         >
           + New Folder
         </button>
