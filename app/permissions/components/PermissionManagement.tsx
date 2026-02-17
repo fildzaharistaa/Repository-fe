@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, X, Trash2, Plus } from 'lucide-react';
+import { Check, X, Trash2, Plus, EditIcon } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFolders } from '@/hooks/useFolders';
 import { useRoles } from '@/hooks/useRoles';
@@ -197,6 +197,17 @@ export function PermissionManagement() {
                       ? new Date(permission.expires_at).toLocaleDateString()
                       : 'Never'}
                   </td>
+
+                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleDelete(permission.id)}
+                      className="inline-flex items-center justify-center rounded-lg bg-blue-50 p-2 text-blue-600 transition-all hover:bg-red-100 hover:shadow-sm"
+                      title="Edit Permission"
+                    >
+                      <EditIcon className="h-4 w-4" />
+                    </button>
+                  </td> 
+                               
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                     <button
                       onClick={() => handleDelete(permission.id)}
@@ -205,7 +216,7 @@ export function PermissionManagement() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </td>
+                  </td> 
                 </tr>
               ))}
             </tbody>
