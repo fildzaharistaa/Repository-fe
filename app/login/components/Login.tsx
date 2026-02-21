@@ -29,39 +29,14 @@ export function Login() {
   };
 
   return (
-  <div className="flex min-h-screen">
+    <div className="relative flex min-h-screen bg-cover bg-center" style={{ backgroundImage: "url('/fotofik.jpg')" }}>
 
-    {/* LEFT SIDE - Background FIK */}
-    <div
-      className="hidden md:flex w-1/2 items-center justify-center bg-cover bg-[position:30%_center] relative"
-      style={{
-        backgroundImage: "url('/fotofik.jpg')",
-      }}
-    >
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-white/10 to-transparent"></div>
+      {/* optional dark overlay over background */}
+      <div className="absolute inset-0 bg-black/60"></div>
 
-      {/* Text */}
-      <div className="relative z-10 text-white px-12">
-        <h1 className="text-4xl font-bold leading-tight">
-          Fakultas Ilmu Komputer UPNVJ
-        </h1>
-
-        <h2 className="mt-2 text-3xl font-semibold text-orange-400">
-          Repository System
-        </h2>
-
-        <p className="mt-6 text-gray-200 max-w-md">
-          Sistem penyimpanan dokumen resmi untuk Wakil Dekan, Dosen,
-          dan Tenaga Kependidikan Fakultas Ilmu Komputer UPN Veteran Jakarta.
-        </p>
-      </div>
-    </div>
-
-    {/* RIGHT SIDE - LOGIN FORM */}
-    <div className="flex w-full md:w-1/2 items-center justify-center bg-gray-50 px-6">
-
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg space-y-6">
+      {/* LOGIN FORM CENTERED */}
+      <div className="relative z-10 flex w-full items-center justify-center px-6">
+        <div className="w-full max-w-md bg-white/90 p-8 rounded-xl shadow-lg space-y-6">
 
         <div>
           <h2 className="text-center text-5x1 font-bold text-orange-900">
