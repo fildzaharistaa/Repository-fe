@@ -330,7 +330,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       {showCreateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 text-black">
             <h3 className="mb-4 text-lg font-semibold">
               {parentId ? 'Create Subfolder' : 'Create Folder'}
             </h3>
@@ -339,7 +339,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Folder name"
-              className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2"
+              className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-black"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateFolder();

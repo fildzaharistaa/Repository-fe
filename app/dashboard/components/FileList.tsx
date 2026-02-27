@@ -80,7 +80,7 @@ export function FileList({ folderId }: FileListProps) {
 
   if (!folderId) {
     return (
-      <div className="flex h-full items-center justify-center bg-white">
+      <div className="flex h-full items-center justify-center bg-black">
         <div className="text-center">
           <Folder className="mx-auto mb-4 h-16 w-16 text-gray-400" />
           <p className="text-xl font-semibold text-gray-700">Select a folder to view files</p>

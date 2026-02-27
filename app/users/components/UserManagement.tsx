@@ -95,7 +95,7 @@ export function UserManagement() {
           onClick={() => setShowCreateDialog(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 font" />
           Create User
         </button>
       </div>

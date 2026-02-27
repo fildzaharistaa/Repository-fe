@@ -75,7 +75,7 @@ export function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 w-full rounded-md border border-gray-500 px-3 py-2 focus:border-orange-500 focus:ring-orange-500 text-gray-800"
-              placeholder='masukin yang bener jing'
+              placeholder='Masukkan Password'
             />
           </div>
 
@@ -102,5 +102,6 @@ export function Login() {
     </div>
 
   </div>
+  
 );
 }
