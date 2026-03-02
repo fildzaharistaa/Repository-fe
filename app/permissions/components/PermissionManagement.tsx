@@ -7,6 +7,7 @@ import { useFolders } from '@/hooks/useFolders';
 import { useRoles } from '@/hooks/useRoles';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { FolderPermission } from '@/types';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 export function PermissionManagement() {
   const { permissions, loading, error, fetchPermissions, createPermission, updatePermission, deletePermission } = usePermissions();
@@ -15,6 +16,9 @@ export function PermissionManagement() {
   const { roles, loading: rolesLoading } = useRoles();
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
+  const [loadingDelete, setLoadingDelete] = useState(false);
   const [formData, setFormData] = useState({
     folder_id: '',
     user_id: '',
@@ -60,15 +64,26 @@ export function PermissionManagement() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this permission?')) return;
-    
+  const handleDelete = (id: string) => {
+    setPermissionToDelete(id);
+    setShowConfirm(true);
+  };
+
+  const confirmDeletePermission = async () => {
+    if (!permissionToDelete) return;
+
     try {
-      await deletePermission(id);
-      fetchPermissions(selectedFolderId || undefined);
-      alert('Permission deleted successfully');
+      setLoadingDelete(true);
+
+      await deletePermission(permissionToDelete);
+      fetchPermissions();
+
+      setShowConfirm(false);
+      setPermissionToDelete(null);
     } catch (err) {
       alert(handleApiError(err));
+    } finally {
+      setLoadingDelete(false);
     }
   };
 
@@ -337,6 +352,18 @@ export function PermissionManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={showConfirm}
+        title="Delete Permission"
+        description="Are you sure you want to delete this permission?"
+        loading={loadingDelete}
+        onCancel={() => {
+          setShowConfirm(false);
+          setPermissionToDelete(null);
+        }}
+        onConfirm={confirmDeletePermission}
+      />
     </div>
   );
 }

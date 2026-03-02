@@ -6,6 +6,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { useRoles } from '@/hooks/useRoles';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { User } from '@/types';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 export function UserManagement() {
   const { users, loading, error, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
@@ -14,6 +15,9 @@ export function UserManagement() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [loadingDelete, setLoadingDelete] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -56,16 +60,9 @@ export function UserManagement() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    
-    try {
-      await deleteUser(id);
-      fetchUsers(page, 10);
-      alert('User deleted successfully');
-    } catch (err) {
-      alert(handleApiError(err));
-    }
+  const handleDelete = (id: string) => {
+    setUserToDelete(id);
+    setShowConfirm(true);
   };
 
   const openEditDialog = (user: User) => {
@@ -77,6 +74,24 @@ export function UserManagement() {
       role_id: user.role_id,
     });
     setShowEditDialog(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setLoadingDelete(true);
+
+      await deleteUser(userToDelete);
+      fetchUsers(page, 10);
+
+      setShowConfirm(false);
+      setUserToDelete(null);
+    } catch (err) {
+      alert(handleApiError(err));
+    } finally {
+      setLoadingDelete(false);
+    }
   };
 
   if (loading && !users) {
@@ -292,6 +307,18 @@ export function UserManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={showConfirm}
+        title="Delete User"
+        description="Are you sure you want to delete this user?"
+        loading={loadingDelete}
+        onCancel={() => {
+          setShowConfirm(false);
+          setUserToDelete(null);
+        }}
+        onConfirm={confirmDeleteUser}
+      />
     </div>
   );
 }
