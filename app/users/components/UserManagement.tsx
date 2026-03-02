@@ -93,7 +93,7 @@ export function UserManagement() {
         <h2 className="text-2xl font-bold text-black">User Management</h2>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
         >
           <Plus className="h-4 w-4 font" />
           Create User
@@ -180,34 +180,34 @@ export function UserManagement() {
 
       {showCreateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h3 className="mb-4 text-lg font-semibold">Create User</h3>
+          <div className="w-full max-w-md rounded-lg bg-white p-6 ">
+            <h3 className="text-black mb-4 text-lg font-semibold">Create User</h3>
             <div className="space-y-4">
               <input
                 type="text"
-                placeholder="Name"
+                placeholder="Nama"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
               <input
                 type="email"
                 placeholder="Email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
               <input
                 type="password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
               <select
                 value={formData.role_id}
                 onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
                 disabled={rolesLoading}
               >
                 <option value="">Select Role</option>
@@ -221,7 +221,7 @@ export function UserManagement() {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={handleCreate}
-                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="flex-1 rounded-md bg-orange-600 px-4 py-2 text-white hover:bg-orange-700"
               >
                 Create
               </button>
@@ -230,7 +230,7 @@ export function UserManagement() {
                   setShowCreateDialog(false);
                   setFormData({ email: '', password: '', name: '', role_id: '' });
                 }}
-                className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
+                className="text-black flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
               >
                 Cancel
               </button>
@@ -242,26 +242,26 @@ export function UserManagement() {
       {showEditDialog && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">
           <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h3 className="mb-4 text-lg font-semibold">Edit User</h3>
+            <h3 className="text-black mb-4 text-lg font-semibold">Edit User</h3>
             <div className="space-y-4">
               <input
                 type="text"
                 placeholder="Name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
               <input
                 type="password"
                 placeholder="New Password (leave empty to keep current)"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
               <select
                 value={formData.role_id}
                 onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
                 disabled={rolesLoading}
               >
                 {roles.map((role) => (
@@ -284,7 +284,7 @@ export function UserManagement() {
                   setSelectedUser(null);
                   setFormData({ email: '', password: '', name: '', role_id: '' });
                 }}
-                className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
+                className="text-black flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
               >
                 Cancel
               </button>

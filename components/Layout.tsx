@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import { FolderTree } from '@/components/FolderTree';
+import { NotificationBell } from '@/components/NotificationBell';
+import { GlobalSearch } from '@/components/GlobalSearch';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthContext();
@@ -27,7 +29,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="border-b border-gray-200 bg-white shadow-sm">
+        <header className="flex items-center justify-between border-b border-gray-200 bg-white shadow-sm">
+          <div className="border-gray-200 flex items-center justify-start gap-4 px-6 py-4">
+              <GlobalSearch />
+          </div>
+
           <div className="flex items-center justify-end gap-4 px-6 py-4">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3 rounded-lg bg-gray-100 px-4 py-2">
@@ -39,6 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             </div>
+            <div className="flex items-center gap-3 rounded-lg bg-gray-100 px-2 py-1"><NotificationBell /></div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {

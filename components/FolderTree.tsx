@@ -62,11 +62,11 @@ function FolderItem({
             <span className="w-3" />
           )}
           {expanded ? (
-            <FolderOpen className="h-4 w-4 text-blue-600" />
+            <FolderOpen className="h-4 w-4 text-orange-600" />
           ) : (
             <Folder className="h-4 w-4 text-gray-600" />
           )}
-          <span className="text-sm font-medium">{folder.name}</span>
+          <span className="text-black text-sm font-medium">{folder.name}</span>
         </button>
         <div className="flex gap-1">
           <button
@@ -285,7 +285,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               }}
               className="rounded"
             />
-            <label htmlFor="admin-mode" className="text-xs text-gray-600 cursor-pointer">
+            <label htmlFor="admin-mode" className="text-sm text-gray-600 cursor-pointer">
               Admin View (All Folders)
             </label>
           </div>
@@ -297,7 +297,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           + New Folder
         </button>
         {adminMode && isAdmin && (
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-gray-600">
             Showing all folders including those without permissions
           </p>
         )}
@@ -312,7 +312,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           </div>
         ) : (
           folders.map((folder) => (
-            <FolderItem
+            <FolderItem 
               key={folder.id}
               folder={folder}
               selectedId={selectedFolderId}
@@ -349,7 +349,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             <div className="flex gap-2">
               <button
                 onClick={handleCreateFolder}
-                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="flex-1 rounded-md bg-orange-600 px-4 py-2 text-white hover:bg-orange-700"
               >
                 Create
               </button>

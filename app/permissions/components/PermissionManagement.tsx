@@ -97,7 +97,7 @@ export function PermissionManagement() {
         <h2 className="text-2xl font-bold text-black">Permission Management</h2>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange -800 hover:shadow-lg"
         >
           <Plus className="h-4 w-4" />
           Create Permission
@@ -105,13 +105,13 @@ export function PermissionManagement() {
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="text-black block text-sm font-medium">
           Filter by Folder
         </label>
         <select
           value={selectedFolderId}
           onChange={(e) => setSelectedFolderId(e.target.value)}
-          className="mt-1 rounded-md border border-gray-300 px-3 py-2"
+          className="text-black text-sm mt-1 rounded-md border border-gray-300 px-3 py-2"
         >
           <option value="">All Folders</option>
           {folders.map((folder) => (
@@ -227,17 +227,17 @@ export function PermissionManagement() {
       {showCreateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">
           <div className="w-full max-w-md rounded-lg bg-white p-6">
-            <h3 className="mb-4 text-lg font-semibold">Create Permission</h3>
+            <h3 className="text-black mb-4 text-lg font-semibold">Create Permission</h3>
             <div className="space-y-4">
               <select
                 value={formData.folder_id}
                 onChange={(e) => setFormData({ ...formData, folder_id: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
                 required
               >
-                <option value="">Select Folder</option>
+                <option className="text-black " value="">Select Folder</option>
                 {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
+                  <option key={folder.id} value={folder.id} className="text-black">
                     {folder.name}
                   </option>
                 ))}
@@ -247,22 +247,22 @@ export function PermissionManagement() {
                 placeholder="User ID (optional)"
                 value={formData.user_id}
                 onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
               <select
                 value={formData.role_id}
                 onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
                 disabled={rolesLoading}
               >
-                <option value="">Select Role (optional)</option>
+                <option className="text-black" value="">Select Role (optional)</option>
                 {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
+                  <option key={role.id} value={role.id} className="text-black">
                     {role.name} - {role.description}
                   </option>
                 ))}
               </select>
-              <div className="space-y-2">
+              <div className="text-black space-y-2">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
@@ -305,13 +305,13 @@ export function PermissionManagement() {
                 placeholder="Expires At (optional)"
                 value={formData.expires_at}
                 onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
               />
             </div>
             <div className="mt-4 flex gap-2">
               <button
                 onClick={handleCreate}
-                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="flex-1 rounded-md bg-orange-600 px-4 py-2 text-white hover:bg-orange-700"
               >
                 Create
               </button>
@@ -329,7 +329,7 @@ export function PermissionManagement() {
                     expires_at: '',
                   });
                 }}
-                className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
+                className="text-black flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
               >
                 Cancel
               </button>
