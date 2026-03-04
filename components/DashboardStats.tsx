@@ -30,7 +30,7 @@ export function DashboardStats() {
     <div className="space-y-6">
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-linear-to-br from-blue-50 to-blue-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-blue-600">Total Folders</p>
@@ -42,7 +42,7 @@ export function DashboardStats() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-green-50 to-green-100 p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-linear-to-br from-green-50 to-green-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-green-600">Total Files</p>
@@ -54,7 +54,7 @@ export function DashboardStats() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-linear-to-br from-purple-50 to-purple-100 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-purple-600">Total Storage</p>

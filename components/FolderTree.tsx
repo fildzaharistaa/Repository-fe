@@ -19,6 +19,7 @@ import { useFolders } from '@/hooks/useFolders';
 import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
+import { ConfirmModal } from './ConfirmModal';
 
 interface FolderItemProps {
   folder: FolderTreeNode;
@@ -82,9 +83,7 @@ function FolderItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm(`Delete folder "${folder.name}"?`)) {
-                onDelete(folder.id);
-              }
+              onDelete(folder.id);
             }}
             className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
             title="Delete folder"
@@ -126,6 +125,9 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [parentId, setParentId] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
+  const [loadingDelete, setLoadingDelete] = useState(false);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -140,14 +142,26 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
     }
   };
 
-  const handleDeleteFolder = async (id: string) => {
+  const handleDeleteFolder = (id: string) => {
+    setPermissionToDelete(id);
+    setShowConfirm(true);
+  };
+
+  const confirmDeleteFolder = async () => {
+    if (!permissionToDelete) return;
+
     try {
-      await deleteFolder(id);
-      if (selectedFolderId === id) {
-        onFolderSelect(null);
-      }
+      setLoadingDelete(true);
+
+      await deleteFolder(permissionToDelete);
+      refresh();
+
+      setShowConfirm(false);
+      setPermissionToDelete(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete folder');
+    } finally {
+      setLoadingDelete(false);
     }
   };
 
@@ -188,7 +202,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       </div>
 
       {/* Navigation Menu */}
-      <div className="border-b border-gray-200 bg-gradient-to-br from-gray-50 to-white p-4">
+      <div className="border-b border-gray-200 bg-linear-to-br from-gray-50 to-white p-4">
         <nav className="space-y-1">
           <button
             onClick={() => {
@@ -271,7 +285,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       {/* Folder Management Section */}
       <div className="flex-1 overflow-y-auto">
-        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-4 space-y-2">
+        <div className="border-b border-gray-200 bg-linear-to-r from-gray-50 to-white p-4 space-y-2">
         {isAdmin && (
           <div className="flex items-center gap-2">
             <input
@@ -292,7 +306,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         )}
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="w-full rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
+          className="w-full rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
         >
           + New Folder
         </button>
@@ -367,6 +381,17 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           </div>
         </div>
       )}
+      <ConfirmModal
+        open={showConfirm}
+        title="Delete Folder"
+        description="Are you sure you want to delete this folder?"
+        loading={loadingDelete}
+        onCancel={() => {
+          setShowConfirm(false);
+          setPermissionToDelete(null);
+        }}
+        onConfirm={confirmDeleteFolder}
+      />
     </div>
   );
 }

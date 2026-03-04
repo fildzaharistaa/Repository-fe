@@ -7,6 +7,7 @@ import { useRoles } from '@/hooks/useRoles';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { User } from '@/types';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import toast from 'react-hot-toast';
 
 export function UserManagement() {
   const { users, loading, error, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
@@ -83,12 +84,16 @@ export function UserManagement() {
       setLoadingDelete(true);
 
       await deleteUser(userToDelete);
+
+      toast.success("User deleted successfully");
+
       fetchUsers(page, 10);
 
       setShowConfirm(false);
       setUserToDelete(null);
+
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(handleApiError(err));
     } finally {
       setLoadingDelete(false);
     }
@@ -108,7 +113,7 @@ export function UserManagement() {
         <h2 className="text-2xl font-bold text-black">User Management</h2>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
+          className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
         >
           <Plus className="h-4 w-4 font" />
           Create User

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { FolderProvider } from "@/context/FolderContext";
 import { Layout } from "@/components/Layout";
 import { Chatbot } from "@/components/Chatbot";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
           <FolderProvider>
             <Layout>{children}</Layout>
             <Chatbot />
+            <Toaster position="top-right" />
           </FolderProvider>
         </AuthProvider>
       </body>

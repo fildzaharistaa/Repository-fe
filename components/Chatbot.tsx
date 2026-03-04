@@ -40,7 +40,7 @@ export function Chatbot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg transition-all hover:from-orange-700 hover:to-orange-800 hover:scale-110 hover:shadow-xl"
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-linear-to-r from-orange-600 to-orange-700 text-white shadow-lg transition-all hover:from-orange-700 hover:to-orange-800 hover:scale-110 hover:shadow-xl"
           title="Chatbot"
         >
           <MessageCircle className="h-6 w-6" />
@@ -49,9 +49,9 @@ export function Chatbot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex h-[600px] w-[400px] flex-col rounded-xl border border-gray-200 bg-white shadow-2xl">
+        <div className="fixed bottom-6 right-6 z-50 flex h-150 w-100 flex-col rounded-xl border border-gray-200 bg-white shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-gray-200 bg-linear-to-r from-orange-600 to-orange-700 px-4 py-3">
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-white" />
               <h3 className="text-base font-semibold text-white">Chatbot Assistant</h3>
@@ -158,7 +158,7 @@ export function Chatbot() {
               <button
                 onClick={handleSend}
                 disabled={loading || !inputMessage.trim()}
-                className="flex items-center justify-center rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2 text-white transition-all hover:from-orange-700 hover:to-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center justify-center rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2 text-white transition-all hover:from-orange-700 hover:to-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

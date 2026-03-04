@@ -54,7 +54,7 @@ export function FileUpload({ folderId }: FileUploadProps) {
       <div className="border-b border-gray-200 bg-white p-4">
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
+          className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
         >
           <Upload className="h-4 w-4" />
           Upload Files
@@ -72,7 +72,7 @@ export function FileUpload({ folderId }: FileUploadProps) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-linear-to-r from-gray-50 to-white px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900">Upload Files</h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -92,7 +92,7 @@ export function FileUpload({ folderId }: FileUploadProps) {
                 className={`rounded-xl border-2 border-dashed p-8 text-center transition-all ${
                   isDragging
                     ? 'border-blue-500 bg-blue-100 shadow-lg scale-105'
-                    : 'border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
+                    : 'border-blue-300 bg-linear-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
                 }`}
               >
                 <input
@@ -112,7 +112,7 @@ export function FileUpload({ folderId }: FileUploadProps) {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>

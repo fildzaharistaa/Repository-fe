@@ -8,6 +8,7 @@ import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
 import type { File } from '@/types';
+import toast from 'react-hot-toast';
 
 interface FileListProps {
   folderId: string | null;
@@ -48,17 +49,16 @@ export function FileList({ folderId }: FileListProps) {
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0 || !folderId) return;
 
-    setUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
         await uploadFile(files[i]);
       }
-      alert('Files uploaded successfully');
+
+      toast.success('Files uploaded successfully');
       setShowUploadModal(false);
+
     } catch (err) {
-      alert(handleApiError(err));
-    } finally {
-      setUploading(false);
+      toast.error(handleApiError(err));
     }
   };
 
@@ -126,7 +126,7 @@ export function FileList({ folderId }: FileListProps) {
             {folderId && (
               <button
                 onClick={() => setShowUploadModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
+                className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
               >
                 <Upload className="h-4 w-4" />
                 Upload Files
@@ -239,7 +239,7 @@ export function FileList({ folderId }: FileListProps) {
             className="relative w-full max-w-5xl rounded-xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-linear-to-r from-gray-50 to-white px-6 py-4">
               <div className="flex items-center gap-3">
                 <FileIcon mimeType={selectedFile.mime_type} className="h-8 w-8" />
                 <div>
@@ -252,7 +252,7 @@ export function FileList({ folderId }: FileListProps) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDownload(selectedFile)}
-                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
+                  className="flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
                 >
                   <Download className="h-4 w-4" />
                   Download
@@ -284,7 +284,7 @@ export function FileList({ folderId }: FileListProps) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-linear-to-r from-gray-50 to-white px-6 py-4">
               <h3 className="text-lg font-semibold text-gray-900">Upload Files</h3>
               <button
                 onClick={() => setShowUploadModal(false)}
@@ -304,7 +304,7 @@ export function FileList({ folderId }: FileListProps) {
                 className={`rounded-xl border-2 border-dashed p-8 text-center transition-all ${
                   isDragging
                     ? 'border-blue-500 bg-blue-100 shadow-lg scale-105'
-                    : 'border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
+                    : 'border-blue-300 bg-linear-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
                 }`}
               >
                 <input
@@ -324,7 +324,7 @@ export function FileList({ folderId }: FileListProps) {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? (
                     <>

@@ -8,6 +8,7 @@ import { useRoles } from '@/hooks/useRoles';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { FolderPermission } from '@/types';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import toast from 'react-hot-toast';
 
 export function PermissionManagement() {
   const { permissions, loading, error, fetchPermissions, createPermission, updatePermission, deletePermission } = usePermissions();
@@ -76,12 +77,15 @@ export function PermissionManagement() {
       setLoadingDelete(true);
 
       await deletePermission(permissionToDelete);
-      fetchPermissions();
+
+      toast.success("Permission deleted successfully");
+
+      fetchPermissions(selectedFolderId || undefined);
 
       setShowConfirm(false);
       setPermissionToDelete(null);
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(handleApiError(err));
     } finally {
       setLoadingDelete(false);
     }
@@ -112,7 +116,7 @@ export function PermissionManagement() {
         <h2 className="text-2xl font-bold text-black">Permission Management</h2>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange -800 hover:shadow-lg"
+          className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
         >
           <Plus className="h-4 w-4" />
           Create Permission

@@ -19,7 +19,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar - Full Height from Top */}
-      <div className="w-72 flex-shrink-0 border-r border-gray-200 bg-white shadow-lg">
+      <div className="w-72 shrink-0 border-r border-gray-200 bg-white shadow-lg">
         <FolderTree
           selectedFolderId={selectedFolderId}
           onFolderSelect={setSelectedFolderId}

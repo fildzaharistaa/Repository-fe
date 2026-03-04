@@ -29,20 +29,17 @@ export function Login() {
   };
 
   return (
-    <div className="relative flex min-h-screen bg-cover bg-center" style={{ backgroundImage: "url('/fotofik.jpg')" }}>
-
-      {/* optional dark overlay over background */}
-      <div className="absolute inset-0 bg-black/60"></div>
+    <div className="relative flex min-h-screen bg-cover bg-center" style={{ backgroundImage: "url('/fotofikhd.png')" }}>
 
       {/* LOGIN FORM CENTERED */}
       <div className="relative z-10 flex w-full items-center justify-center px-6">
         <div className="w-full max-w-md bg-white/90 p-8 rounded-xl shadow-lg space-y-6">
 
         <div>
-          <h2 className="text-center text-5x1 font-bold text-orange-900">
-            Login
-          </h2>
-          <p className="text-center text-sm text-gray-600 mt-1">
+          <h1 className="pb-4 text-center text-xl font-bold text-orange-700">
+            Sistem Repository FIK UPNVJ
+          </h1>
+          <p className="text-center text-md text-black">
             Sign in to your account
           </p>
         </div>
@@ -52,7 +49,7 @@ export function Login() {
           {/* Email */}
           <div>
             <label className="block text-sm font-bold text-orange-700">
-              Email address
+              Email Address
             </label>
             <input
               type="email"
@@ -90,7 +87,7 @@ export function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 text-white py-2 rounded-md hover:bg-orange-600 transition disabled:opacity-50"
+            className="w-full bg-orange-500 text-white py-3 rounded-md hover:bg-orange-700 transition disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>

@@ -93,7 +93,7 @@ export function FilePreview({ file }: FilePreviewProps) {
   }
 
   return (
-    <div className="flex h-96 items-center justify-center rounded-lg bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex h-96 items-center justify-center rounded-lg bg-linear-to-br from-gray-50 to-gray-100">
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
           <FileIcon mimeType={file.mime_type} className="h-16 w-16" />

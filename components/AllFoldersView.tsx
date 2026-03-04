@@ -88,7 +88,7 @@ export function AllFoldersView() {
                 <div className={`rounded-lg p-3 ${
                   isSelected 
                     ? 'bg-blue-100' 
-                    : 'bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100'
+                    : 'bg-linear-to-br from-blue-50 to-indigo-50 group-hover:from-blue-100 group-hover:to-indigo-100'
                 }`}>
                   {hasChildren ? (
                     <FolderOpen className={`h-8 w-8 ${
