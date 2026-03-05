@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Campus Repository System",
-  description: "Campus Repository System - File Management",
+  title: "Sistem Repository Kampus FIK UPNVJ",
+  description: "Sistem Repository Kampus FIK UPNVJ",
 };
 
 export default function RootLayout({

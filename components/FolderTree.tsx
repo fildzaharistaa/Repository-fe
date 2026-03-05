@@ -195,7 +195,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           <Image src="/upnvj.png" alt="Campus Repository" width={40} height={40} />
           </div>
           <div>
-            <h2 className="text-base font-bold text-orange-600">Campus Repository</h2>
+            <h2 className="text-sm font-bold text-orange-600 leading-tight">
+              <span className="block">Sistem Repository Kampus</span>
+              <span className="block">FIK UPNVJ</span>
+            </h2>
             <p className="text-xs text-orange-500">File Management System</p>
           </div>
         </div>
