@@ -11,7 +11,7 @@ export interface User {
 
 export interface Role {
   id: string;
-  name: 'admin' | 'wd1' | 'wd2' | 'wd3' | 'dosen' | 'tendik';
+  name: 'admin' | 'super admin' | 'wd1' | 'wd2' | 'wd3' | 'dosen' | 'tendik';
   description: string;
   created_at?: string;
   updated_at?: string;

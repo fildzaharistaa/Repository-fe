@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
-import type { File } from '@/types';
+import type { File as FileEntity } from '@/types';
 
 export function useFiles(folderId: string | null) {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileEntity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +31,7 @@ export function useFiles(folderId: string | null) {
     fetchFiles();
   }, [fetchFiles]);
 
-  const uploadFile = useCallback(async (file: File) => {
+  const uploadFile = useCallback(async (file: globalThis.File) => {
     if (!folderId) throw new Error('No folder selected');
     
     try {

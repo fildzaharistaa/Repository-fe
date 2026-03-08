@@ -3,14 +3,14 @@ import type {
   Role,
   Folder,
   FolderTreeNode,
-  File,
+  File as FileEntity,
   FolderPermission,
   PaginatedResponse,
   LoginResponse,
 } from '@/types';
 import { apiLogger } from './logger';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3030/api';
 
 class ApiClient {
   private getToken(): string | null {
@@ -23,9 +23,9 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const token = this.getToken();
-    
+
     const headers: Record<string, string> = {};
-    
+
     // Copy existing headers
     if (options.headers) {
       if (options.headers instanceof Headers) {
@@ -68,7 +68,7 @@ class ApiClient {
     if (!response.ok) {
       let error: { message: string | string[]; statusCode?: number };
       const contentType = response.headers.get('content-type');
-      
+
       if (contentType && contentType.includes('application/json')) {
         try {
           error = await response.json();
@@ -77,14 +77,14 @@ class ApiClient {
         }
       } else {
         const text = await response.text();
-        error = { 
-          message: text || 'Request failed', 
-          statusCode: response.status 
+        error = {
+          message: text || 'Request failed',
+          statusCode: response.status
         };
       }
-      
+
       apiLogger.error(`Request failed: ${response.status}`, error);
-      
+
       if (response.status === 401) {
         // Token expired or invalid, clear storage
         apiLogger.warn('Unauthorized - clearing token');
@@ -97,11 +97,11 @@ class ApiClient {
           }
         }
       }
-      
+
       const errorMessage = Array.isArray(error.message)
         ? error.message.join(', ')
         : error.message || `Request failed with status ${response.status}`;
-      
+
       throw new Error(errorMessage);
     }
 
@@ -118,7 +118,7 @@ class ApiClient {
     }
   }
 
-  // Auth
+  // Autentikasi (Sistem Login)
   async login(email: string, password: string): Promise<LoginResponse> {
     return this.request<LoginResponse>('/auth/login', {
       method: 'POST',
@@ -126,7 +126,7 @@ class ApiClient {
     });
   }
 
-  // Users
+  // Manajemen Pengguna & Profil User
   async getProfile(): Promise<User> {
     return this.request<User>('/users/profile');
   }
@@ -177,7 +177,7 @@ class ApiClient {
     });
   }
 
-  // Folders
+  // Manajemen Folder (Struktur & CRUD)
   async getFolderTree(): Promise<FolderTreeNode[]> {
     return this.request<FolderTreeNode[]>('/folders/tree');
   }
@@ -186,7 +186,7 @@ class ApiClient {
     return this.request<Folder[]>('/folders');
   }
 
-  // Admin only - Get all folders (including without permissions)
+  // Khusus Admin - Mengambil semua folder di sistem tanpa filter permission
   async getAllFolders(): Promise<Folder[]> {
     return this.request<Folder[]>('/folders/admin/all');
   }
@@ -225,8 +225,8 @@ class ApiClient {
     });
   }
 
-  // Files
-  async uploadFile(folderId: string, file: File): Promise<File> {
+  // Manajemen File (Upload, Download, Hapus File)
+  async uploadFile(folderId: string, file: globalThis.File): Promise<FileEntity> {
     const formData = new FormData();
     // File extends Blob, but TypeScript needs explicit handling
     formData.append('file', file as unknown as Blob, file.name);
@@ -251,7 +251,7 @@ class ApiClient {
     if (!response.ok) {
       let error: { message: string | string[] };
       const contentType = response.headers.get('content-type');
-      
+
       if (contentType && contentType.includes('application/json')) {
         try {
           error = await response.json();
@@ -324,7 +324,7 @@ class ApiClient {
           }
         }
       }
-      
+
       const errorText = await response.text().catch(() => 'Download failed');
       throw new Error(errorText || `Download failed with status ${response.status}`);
     }
@@ -338,7 +338,7 @@ class ApiClient {
     });
   }
 
-  // Permissions (Admin only)
+  // Pengaturan Hak Akses Folder (Permission - Khusus Admin)
   async getPermissions(folderId?: string): Promise<FolderPermission[]> {
     const query = folderId ? `?folderId=${folderId}` : '';
     return this.request<FolderPermission[]>(`/permissions${query}`);
@@ -382,7 +382,7 @@ class ApiClient {
     });
   }
 
-  // Chatbot
+  // Fitur Asisten Cerdas (Chatbot AI)
   async chatWithBot(message: string): Promise<{ response: string; timestamp: string }> {
     return this.request<{ response: string; timestamp: string }>('/chatbot/chat', {
       method: 'POST',
@@ -405,6 +405,109 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ query }),
     });
+  }
+
+  // Fitur Pencarian Global (Seluruh Sistem)
+  async globalSearch(keyword: string): Promise<{
+    folders: Array<{ id: string; name: string; type: string; parent: string; owner: string; hasAccess: boolean; requestStatus: string | null }>;
+    files: Array<{ id: string; name: string; type: string; parent: string; owner: string; hasAccess: boolean; requestStatus: string | null }>;
+  }> {
+    return this.request(`/search?q=${encodeURIComponent(keyword)}`);
+  }
+
+  // Mengirimkan Permintaan Akses (Request Access)
+  async requestAccess(data: { folderId?: string; fileId?: string }): Promise<any> {
+    return this.request('/access-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Data Statistik Khusus Super Admin
+  async getSuperAdminStats(): Promise<{
+    totalRoles: number;
+    totalFolders: number;
+    totalFiles: number;
+    totalSize: number;
+    foldersPerUnit: Array<{ unit: string; count: string }>;
+    usersPerRole: Array<{ roleName: string; count: string }>;
+    recentActivity: Array<{ timestamp: string; user: string; action: string; type: 'superadmin' | 'user' }>;
+  }> {
+    return this.request('/stats/super-admin');
+  }
+
+  // Data Statistik User Biasa (Hanya folder milik sendiri)
+  async getUserStats(): Promise<{
+    totalFolders: number;
+    totalFiles: number;
+    totalSize: number;
+    recentFiles: Array<{
+      id: string;
+      name: string;
+      size: number;
+      created_at: string;
+      folder_name: string;
+    }>;
+  }> {
+    return this.request('/stats/user');
+  }
+
+  // Mengelola Status Permintaan Akses (List, Approve, Reject)
+  async getPendingAccessRequests(): Promise<any[]> {
+    return this.request('/access-requests/pending');
+  }
+
+  async getMyAccessRequests(): Promise<any[]> {
+    return this.request('/access-requests/my-requests');
+  }
+
+  async getAllAccessRequests(): Promise<any[]> {
+    return this.request('/access-requests/pending');
+  }
+
+  async approveAccessRequest(
+    id: number,
+    permissions?: {
+      can_read?: boolean;
+      can_create?: boolean;
+      can_update?: boolean;
+      can_delete?: boolean;
+    }
+  ): Promise<{ message: string }> {
+    return this.request(`/access-requests/${id}/approve`, {
+      method: 'PATCH',
+      body: JSON.stringify(permissions || { can_read: true }),
+    });
+  }
+
+  async rejectAccessRequest(id: number): Promise<any> {
+    return this.request(`/access-requests/${id}/reject`, {
+      method: 'PATCH',
+    });
+  }
+
+  // Mengambil Data Notifikasi Lonceng (Bell)
+  async getNotifications(): Promise<{
+    incoming: Array<{
+      id: number;
+      type: 'incoming';
+      requesterName: string;
+      requesterEmail: string;
+      resourceName: string;
+      resourceType: 'folder' | 'file';
+      status: string;
+      createdAt: string;
+    }>;
+    updates: Array<{
+      id: number;
+      type: 'update';
+      resourceName: string;
+      resourceType: 'folder' | 'file';
+      status: string;
+      createdAt: string;
+    }>;
+  }> {
+    return this.request('/access-requests/notifications');
   }
 }
 

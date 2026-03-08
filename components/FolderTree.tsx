@@ -8,6 +8,7 @@ import {
   Clock, 
   Users, 
   Lock, 
+  Shield,
   ChevronDown, 
   ChevronRight,
   Plus,
@@ -222,37 +223,40 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             <LayoutDashboard className="h-5 w-5 text-orange-600" />
             <span>Dashboard</span>
           </button>
-          <button
-            onClick={() => {
-              router.push('/dashboard');
-              onFolderSelect(null);
-              setActiveMenu('all-folders');
-            }}
-            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-              activeMenu === 'all-folders'
-                ? 'bg-orange-100 text-orange-700 font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Folder className="h-5 w-5 text-orange-600" />
-            <span>All Folders</span>
-          </button>
-          <button
-            onClick={() => {
-              router.push('/dashboard');
-              onFolderSelect(null);
-              setActiveMenu('recent-files');
-              // Could add recent files filter here
-            }}
-            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-              activeMenu === 'recent-files'
-                ? 'bg-orange-100 text-orange-700 font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Clock className="h-5 w-5 text-orange-600" />
-            <span>Recent Files</span>
-          </button>
+          {!isAdmin && (
+            <>
+              <button
+                onClick={() => {
+                  router.push('/dashboard');
+                  onFolderSelect(null);
+                  setActiveMenu('all-folders');
+                }}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeMenu === 'all-folders'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Folder className="h-5 w-5 text-orange-600" />
+                <span>All Folders</span>
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/dashboard');
+                  onFolderSelect(null);
+                  setActiveMenu('recent-files');
+                }}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeMenu === 'recent-files'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Clock className="h-5 w-5 text-orange-600" />
+                <span>Recent Files</span>
+              </button>
+            </>
+          )}
           {isAdmin && (
             <>
               <div className="my-2 border-t border-gray-200"></div>
@@ -260,7 +264,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Admin</p>
               </div>
               <button
-                onClick={() => router.push('/users')}
+                onClick={() => {
+                  router.push('/users');
+                  onFolderSelect(null);
+                  setActiveMenu(null);
+                }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                   pathname === '/users'
                     ? 'bg-orange-100 text-orange-700 font-semibold'
@@ -271,61 +279,42 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <span>Users</span>
               </button>
               <button
-                onClick={() => router.push('/permissions')}
+                onClick={() => {
+                  router.push('/super-admin');
+                  onFolderSelect(null);
+                  setActiveMenu(null);
+                }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  pathname === '/permissions'
+                  pathname === '/super-admin'
                     ? 'bg-orange-100 text-orange-700 font-semibold'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Lock className="h-5 w-5 text-orange-600" />
-                <span>Permissions</span>
+                <Shield className="h-5 w-5 text-orange-600" />
+                <span>Role Management</span>
               </button>
             </>
           )}
         </nav>
       </div>
 
-      {/* Folder Management Section */}
+      {/* Folder Management Section - only for non-admin users */}
+      {!isAdmin && (
       <div className="flex-1 overflow-y-auto">
         <div className="border-b border-gray-200 bg-linear-to-r from-gray-50 to-white p-4 space-y-2">
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="admin-mode"
-              checked={adminMode}
-              onChange={(e) => {
-                setAdminMode(e.target.checked);
-                // Refresh folders when toggling admin mode
-                setTimeout(() => refresh(), 100);
-              }}
-              className="rounded"
-            />
-            <label htmlFor="admin-mode" className="text-sm text-gray-600 cursor-pointer">
-              Admin View (All Folders)
-            </label>
-          </div>
-        )}
-        <button
-          onClick={() => setShowCreateDialog(true)}
-          className="w-full rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
-        >
-          + New Folder
-        </button>
-        {adminMode && isAdmin && (
-          <p className="text-sm text-gray-600">
-            Showing all folders including those without permissions
-          </p>
-        )}
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="w-full rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
+          >
+            + New Folder
+          </button>
         </div>
         
         <div className="p-2">
         {folders.length === 0 ? (
-          <div className="p-4 text-center text-sm text-gray-500">
-            {adminMode && isAdmin 
-              ? 'No folders found. Create a folder to get started.'
-              : 'No accessible folders. Contact admin for access.'}
+          <div className="p-4 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
+            <span className="block">No folders yet.</span>
+            <span className="block text-xs">Create one to get started, or request access to existing folders.</span>
           </div>
         ) : (
           folders.map((folder) => (
@@ -344,6 +333,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         )}
         </div>
       </div>
+      )}
 
       {showCreateDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">

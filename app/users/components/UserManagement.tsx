@@ -10,10 +10,9 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
 
 export function UserManagement() {
-  const { users, loading, error, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
+  const { users, loading, error, fetchUsers, updateUser, deleteUser } = useUsers();
   const { roles, loading: rolesLoading } = useRoles();
   const [page, setPage] = useState(1);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -29,18 +28,6 @@ export function UserManagement() {
   useEffect(() => {
     fetchUsers(page, 10);
   }, [page, fetchUsers]);
-
-  const handleCreate = async () => {
-    try {
-      await createUser(formData);
-      setShowCreateDialog(false);
-      setFormData({ email: '', password: '', name: '', role_id: '' });
-      fetchUsers(page, 10);
-      alert('User created successfully');
-    } catch (err) {
-      alert(handleApiError(err));
-    }
-  };
 
   const handleUpdate = async () => {
     if (!selectedUser) return;
@@ -111,13 +98,6 @@ export function UserManagement() {
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-bold text-black">User Management</h2>
-        <button
-          onClick={() => setShowCreateDialog(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
-        >
-          <Plus className="h-4 w-4 font" />
-          Create User
-        </button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
@@ -195,67 +175,6 @@ export function UserManagement() {
           >
             Next
           </button>
-        </div>
-      )}
-
-      {showCreateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 ">
-            <h3 className="text-black mb-4 text-lg font-semibold">Create User</h3>
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Nama"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
-              />
-              <select
-                value={formData.role_id}
-                onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                className="text-black w-full rounded-md border border-gray-300 px-3 py-2"
-                disabled={rolesLoading}
-              >
-                <option value="">Select Role</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name} - {role.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={handleCreate}
-                className="flex-1 rounded-md bg-orange-600 px-4 py-2 text-white hover:bg-orange-700"
-              >
-                Create
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateDialog(false);
-                  setFormData({ email: '', password: '', name: '', role_id: '' });
-                }}
-                className="text-black flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

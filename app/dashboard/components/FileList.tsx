@@ -7,7 +7,7 @@ import { formatFileSize, formatDate } from '@/lib/utils/formatters';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
-import type { File } from '@/types';
+import type { File as FileEntity } from '@/types';
 import toast from 'react-hot-toast';
 
 interface FileListProps {
@@ -16,14 +16,14 @@ interface FileListProps {
 
 export function FileList({ folderId }: FileListProps) {
   const { files, loading, error, deleteFile, downloadFile, uploadFile } = useFiles(folderId);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
   const [showQuickView, setShowQuickView] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDownload = async (file: File) => {
+  const handleDownload = async (file: FileEntity) => {
     try {
       await downloadFile(file.id, file.name);
     } catch (err) {
@@ -31,7 +31,7 @@ export function FileList({ folderId }: FileListProps) {
     }
   };
 
-  const handleDelete = async (file: File) => {
+  const handleDelete = async (file: FileEntity) => {
     if (!confirm(`Delete file "${file.name}"?`)) return;
     
     try {
@@ -41,7 +41,7 @@ export function FileList({ folderId }: FileListProps) {
     }
   };
 
-  const handleQuickView = (file: File) => {
+  const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
     setShowQuickView(true);
   };

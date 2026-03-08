@@ -15,6 +15,8 @@ export function useAuth() {
     if (token && savedUser) {
       try {
         setUser(JSON.parse(savedUser));
+
+        
         // Verify token is still valid
         apiClient.getProfile()
           .then(setUser)
