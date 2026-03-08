@@ -41,7 +41,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">{user.name}</p>
+                  <p className="flex items-center gap-2 font-medium text-black">
+                    {user.name}
+                    {user.role?.name && (
+                      <span className="rounded-md bg-orange-600 px-2 py-0.5 text-sm font-medium text-white">
+                        {user.role.name.startsWith('wd')
+                          ? user.role.name.toUpperCase()
+                          : user.role.name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             </div>

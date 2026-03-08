@@ -85,7 +85,7 @@ export function GlobalSearch() {
     try {
       const payload = item.type === 'folder' ? { folderId: item.id } : { fileId: item.id };
       await apiClient.requestAccess(payload);
-      
+
       // Update local state to show 'pending'
       setResults(prev => prev.map(r => r.id === item.id ? { ...r, requestStatus: 'pending' } : r));
     } catch (err: any) {
@@ -117,7 +117,7 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-80" ref={containerRef}>
+    <div className="relative w-96 lg:w-[500px]" ref={containerRef}>
       {/* Input */}
       <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 shadow-sm">
         <Search size={25} className="text-black" />

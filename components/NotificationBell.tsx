@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Check, X, FolderIcon, FileIcon, Loader2 } from 'lucide-react';
+import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 
@@ -149,8 +149,8 @@ export function NotificationBell() {
               {/* Incoming: Request masuk (untuk pemilik folder / admin) */}
               {incoming.length > 0 && (
                 <div>
-                  <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 bg-gray-50">
-                    Access Requests
+                  <div className="text-black p-3 text-sm font-semibold">
+                    Access Requests :
                   </div>
                   {incoming.map((notif) => (
                     <div key={`in-${notif.id}`} className="p-3 border-b last:border-b-0 hover:bg-gray-50">
@@ -164,8 +164,10 @@ export function NotificationBell() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-gray-900">
-                            <span className="font-medium">{notif.requesterName}</span>
-                            {' '}minta akses ke {notif.resourceType}{' '}
+                            <span className="font-medium">{notif.requesterName}</span>  
+                            <br />
+                            {' '} Requested Access to {notif.resourceType}{' '}
+                            <br />
                             <span className="font-medium">"{notif.resourceName}"</span>
                           </p>
                           <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>

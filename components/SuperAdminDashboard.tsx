@@ -210,7 +210,7 @@ export function SuperAdminDashboard() {
           <select
             value={activityFilter}
             onChange={(e) => setActivityFilter(e.target.value as 'all' | 'superadmin' | 'user')}
-            className="rounded-lg border border-black-400 bg-orange-100 px-2 py-1 text-sm text-black-700 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="rounded-lg border border-black-400 bg-orange-100 px-2 py-1 text-sm text-black shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="all">All Activity</option>
             <option value="superadmin">Super Admin</option>
