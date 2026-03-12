@@ -100,9 +100,9 @@ export function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="rounded-2xl border border-gray-200 bg-gradient-to-r from-orange-50 via-white to-orange-50 p-6 shadow-sm">
+      <div className="rounded-2xl border border-gray-200 bg-linear-to-r from-orange-50 via-white to-orange-50 p-6 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 shadow-lg">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-orange-500 to-orange-700 shadow-lg">
             <Shield className="h-7 w-7 text-white" />
           </div>
           <div>

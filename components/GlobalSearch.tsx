@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Loader2, FolderIcon, FileIcon } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
+import { useRouter } from 'next/navigation';
+import { useFolderContext } from '@/context/FolderContext';
 
 type SearchItem = {
   id: string;
@@ -23,6 +25,8 @@ export function GlobalSearch() {
   const [requesting, setRequesting] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { setSelectedFolderId, setActiveMenu } = useFolderContext();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -179,11 +183,31 @@ export function GlobalSearch() {
                 </div>
               </div>
 
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 {item.hasAccess ? (
-                  <span className="text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1.5 rounded-full border border-green-200">
-                    Open
-                  </span>
+                  <button 
+                    onClick={() => {
+                      setOpen(false);
+                      if (item.type === 'folder') {
+                        setSelectedFolderId(item.id);
+                        setActiveMenu(null);
+                        router.push('/dashboard');
+                      } else {
+                        // User can navigate to the shared files view to find it
+                        // Or if it's their own file, to all folders
+                        setActiveMenu('shared-files');
+                        setSelectedFolderId(null);
+                        router.push('/dashboard');
+                      }
+                    }}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                      item.requestStatus === 'approved' 
+                        ? 'text-blue-700 hover:bg-blue-200 bg-blue-100 border-blue-200'
+                        : 'text-green-700 hover:bg-green-200 bg-green-100 border-green-200'
+                    }`}
+                  >
+                    {item.requestStatus === 'approved' ? 'Approved (Open)' : 'Open'}
+                  </button>
                 ) : item.requestStatus === 'pending' ? (
                   <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2.5 py-1.5 rounded-full border border-orange-200">
                     Requested (Pending)

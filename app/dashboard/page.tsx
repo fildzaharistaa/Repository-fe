@@ -6,6 +6,8 @@ import { DashboardStats } from '@/components/DashboardStats';
 import { SuperAdminDashboard } from '@/components/SuperAdminDashboard';
 import { AllFoldersView } from '@/components/AllFoldersView';
 import { RecentFilesView } from '@/components/RecentFilesView';
+import { SharedFoldersView } from '@/components/SharedFoldersView';
+import { SharedFilesView } from '@/components/SharedFilesView';
 import { useFolderContext } from '@/context/FolderContext';
 import { useAuthContext } from '@/context/AuthContext';
 
@@ -50,6 +52,16 @@ function DashboardContent() {
         {activeMenu === 'recent-files' && (
           <div>
             <RecentFilesView />
+          </div>
+        )}
+        {activeMenu === 'shared-folders' && (
+          <div>
+            <SharedFoldersView />
+          </div>
+        )}
+        {activeMenu === 'shared-files' && (
+          <div>
+            <SharedFilesView />
           </div>
         )}
         {!activeMenu && (

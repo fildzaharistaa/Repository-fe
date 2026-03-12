@@ -182,6 +182,10 @@ class ApiClient {
     return this.request<FolderTreeNode[]>('/folders/tree');
   }
 
+  async getSharedFolderTree(): Promise<FolderTreeNode[]> {
+    return this.request<FolderTreeNode[]>('/folders/shared/tree');
+  }
+
   async getFolders(): Promise<Folder[]> {
     return this.request<Folder[]>('/folders');
   }
@@ -291,12 +295,12 @@ class ApiClient {
     return response.json();
   }
 
-  async getFiles(folderId: string): Promise<File[]> {
-    return this.request<File[]>(`/files/folder/${folderId}`);
+  async getFiles(folderId: string): Promise<FileEntity[]> {
+    return this.request<FileEntity[]>(`/files/folder/${folderId}`);
   }
 
-  async getFile(id: string): Promise<File> {
-    return this.request<File>(`/files/${id}`);
+  async getFile(id: string): Promise<FileEntity> {
+    return this.request<FileEntity>(`/files/${id}`);
   }
 
   async downloadFile(id: string): Promise<Blob> {
@@ -484,6 +488,10 @@ class ApiClient {
     return this.request(`/access-requests/${id}/reject`, {
       method: 'PATCH',
     });
+  }
+
+  async getSharedFiles(): Promise<(FileEntity & { owner_name: string })[]> {
+    return this.request('/access-requests/shared-files');
   }
 
   // Mengambil Data Notifikasi Lonceng (Bell)

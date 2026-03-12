@@ -32,6 +32,16 @@ export function NotificationBell() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Permission Modal state
+  const [showPermissionModal, setShowPermissionModal] = useState<number | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState({
+    can_read: true,
+    can_create: false,
+    can_update: false,
+    can_delete: false,
+    can_download: true,
+  });
+
   // Fetch notifikasi dari backend
   const fetchNotifications = useCallback(async () => {
     try {
@@ -72,13 +82,32 @@ export function NotificationBell() {
   }, []);
 
   // Approve request
-  const handleApprove = async (id: number, e: React.MouseEvent) => {
+  const handleApproveClick = (notif: IncomingNotif, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (notif.resourceType === 'folder') {
+      // Buka modal untuk set permission
+      setOpen(false); // Tutup notif popup agar modal tidak tertutup otomatis oleh klik luar
+      setShowPermissionModal(notif.id);
+      setSelectedPermissions({
+        can_read: true,
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        can_download: true,
+      });
+    } else {
+      // File request, just give read/download access
+      executeApprove(notif.id, { can_read: true, can_download: true });
+    }
+  };
+
+  const executeApprove = async (id: number, permissions: any) => {
     setActionLoading(id);
     try {
-      await apiClient.approveAccessRequest(id, { can_read: true });
+      await apiClient.approveAccessRequest(id, permissions);
       // Hapus dari list incoming
       setIncoming(prev => prev.filter(n => n.id !== id));
+      setShowPermissionModal(null);
     } catch {
       // skip
     } finally {
@@ -175,7 +204,7 @@ export function NotificationBell() {
                           {/* Tombol Approve / Reject */}
                           <div className="flex items-center gap-2 mt-2">
                             <button
-                              onClick={(e) => handleApprove(notif.id, e)}
+                              onClick={(e) => handleApproveClick(notif, e)}
                               disabled={actionLoading === notif.id}
                               className="flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 hover:bg-green-100 transition-colors disabled:opacity-50"
                             >
@@ -237,6 +266,99 @@ export function NotificationBell() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Permission Modal */}
+      {showPermissionModal !== null && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl overflow-hidden text-left" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Folder Permissions</h3>
+              <button 
+                onClick={() => setShowPermissionModal(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm text-black mb-4">
+                Pilih akses (permission) apa saja yang akan Anda berikan ke pengguna ini untuk folder tersebut:
+              </p>
+
+              <div className="space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedPermissions.can_read}
+                    disabled
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">View (Read Only)</p>
+                    <p className="text-gray-500">Dapat melihat folder dan isinya.</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedPermissions.can_create}
+                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_create: e.target.checked})}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">Upload & Create</p>
+                    <p className="text-gray-500">Dapat mengunggah file baru dan membuat folder.</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedPermissions.can_update}
+                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_update: e.target.checked})}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">Edit / Update</p>
+                    <p className="text-gray-500">Dapat mengubah nama file atau folder.</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedPermissions.can_delete}
+                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_delete: e.target.checked})}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium text-gray-900">Delete</p>
+                    <p className="text-gray-500">Dapat menghapus file atau folder dari dalam.</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowPermissionModal(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => executeApprove(showPermissionModal, selectedPermissions)}
+                className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 transition-colors shadow-sm"
+              >
+                {actionLoading === showPermissionModal ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Confirm Approval
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

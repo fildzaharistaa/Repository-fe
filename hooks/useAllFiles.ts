@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
-import type { File, FolderTreeNode } from '@/types';
+import type { File as FileEntity, FolderTreeNode } from '@/types';
 
 // Helper function to flatten folder tree and get all folder IDs
 function getAllFolderIds(folders: FolderTreeNode[]): string[] {
@@ -22,7 +22,7 @@ function getAllFolderIds(folders: FolderTreeNode[]): string[] {
 }
 
 export function useAllFiles(folders: FolderTreeNode[]) {
-  const [allFiles, setAllFiles] = useState<File[]>([]);
+  const [allFiles, setAllFiles] = useState<FileEntity[]>([]);
   const [fileFolderMap, setFileFolderMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export function useAllFiles(folders: FolderTreeNode[]) {
       });
       
       const results = await Promise.all(filePromises);
-      const files: File[] = [];
+      const files: FileEntity[] = [];
       const map = new Map<string, string>();
       
       for (const { files: folderFiles, folderId } of results) {

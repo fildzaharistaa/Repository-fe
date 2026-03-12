@@ -200,7 +200,7 @@ export function RecentFilesView() {
             className="relative w-full max-w-5xl rounded-xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-linear-to-r from-gray-50 to-white px-6 py-4">
               <div className="flex items-center gap-3">
                 <FileIcon mimeType={selectedFile.mime_type} className="h-8 w-8" />
                 <div>

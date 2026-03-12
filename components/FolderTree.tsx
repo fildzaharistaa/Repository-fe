@@ -13,7 +13,9 @@ import {
   ChevronRight,
   Plus,
   X,
-  FolderOpen
+  FolderOpen,
+  Share2,
+  FileText
 } from 'lucide-react';
 import Image from 'next/image';
 import { useFolders } from '@/hooks/useFolders';
@@ -254,6 +256,41 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               >
                 <Clock className="h-5 w-5 text-orange-600" />
                 <span>Recent Files</span>
+              </button>
+              
+              <div className="my-2 border-t border-gray-200"></div>
+              <div className="px-2 py-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Shared With Me</p>
+              </div>
+              <button
+                onClick={() => {
+                  router.push('/dashboard');
+                  onFolderSelect(null);
+                  setActiveMenu('shared-folders');
+                }}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeMenu === 'shared-folders'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Share2 className="h-5 w-5 text-orange-600" />
+                <span>Shared Folders</span>
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/dashboard');
+                  onFolderSelect(null);
+                  setActiveMenu('shared-files');
+                }}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeMenu === 'shared-files'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FileText className="h-5 w-5 text-orange-600" />
+                <span>Shared Files</span>
               </button>
             </>
           )}
