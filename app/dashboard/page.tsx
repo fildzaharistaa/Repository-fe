@@ -8,6 +8,7 @@ import { AllFoldersView } from '@/components/AllFoldersView';
 import { RecentFilesView } from '@/components/RecentFilesView';
 import { SharedFoldersView } from '@/components/SharedFoldersView';
 import { SharedFilesView } from '@/components/SharedFilesView';
+import { RecycleBinView } from '@/components/RecycleBinView';
 import { useFolderContext } from '@/context/FolderContext';
 import { useAuthContext } from '@/context/AuthContext';
 
@@ -62,6 +63,11 @@ function DashboardContent() {
         {activeMenu === 'shared-files' && (
           <div>
             <SharedFilesView />
+          </div>
+        )}
+        {activeMenu === 'recycle-bin' && (
+          <div>
+            <RecycleBinView />
           </div>
         )}
         {!activeMenu && (

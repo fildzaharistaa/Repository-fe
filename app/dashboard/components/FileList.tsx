@@ -7,6 +7,7 @@ import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatt
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
+import { ConfirmModal } from '../../../components/ConfirmModal';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 import toast from 'react-hot-toast';
@@ -33,6 +34,9 @@ export function FileList({ folderId }: FileListProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<FileEntity | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownload = async (file: FileEntity) => {
@@ -43,13 +47,23 @@ export function FileList({ folderId }: FileListProps) {
     }
   };
 
-  const handleDelete = async (file: FileEntity) => {
-    if (!confirm(`Delete file "${file.name}"?`)) return;
-    
+  const handleDelete = (file: FileEntity) => {
+    setFileToDelete(file);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!fileToDelete) return;
     try {
-      await deleteFile(file.id);
+      setDeleteLoading(true);
+      await deleteFile(fileToDelete.id);
+      toast.success(`"${fileToDelete.name}" dipindahkan ke Recycle Bin`);
+      setShowDeleteConfirm(false);
+      setFileToDelete(null);
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(handleApiError(err));
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -359,6 +373,19 @@ export function FileList({ folderId }: FileListProps) {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Hapus File"
+        description={`Apakah Anda yakin ingin menghapus "${fileToDelete?.name}"? File akan dipindahkan ke Recycle Bin dan bisa di-restore nanti.`}
+        confirmText="Hapus"
+        loading={deleteLoading}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setFileToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+      />
     </>
   );
 }
