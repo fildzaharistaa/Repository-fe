@@ -15,7 +15,8 @@ import {
   X,
   FolderOpen,
   Share2,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 import Image from 'next/image';
 import { useFolders } from '@/hooks/useFolders';
@@ -232,6 +233,21 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           >
             <LayoutDashboard className="h-5 w-5 text-orange-600" />
             <span>Dashboard</span>
+          </button>
+          <button
+            onClick={() => {
+              router.push('/dashboard');
+              onFolderSelect(null);
+              setActiveMenu('recycle-bin');
+            }}
+            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+              activeMenu === 'recycle-bin'
+                ? 'bg-orange-100 text-orange-700 font-semibold'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Trash2 className="h-5 w-5 text-orange-600" />
+            <span>Recycle Bin</span>
           </button>
           {!isAdmin && (
             <>
@@ -451,8 +467,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       )}
       <ConfirmModal
         open={showConfirm}
-        title="Delete Folder"
-        description="Are you sure you want to delete this folder?"
+        title="Hapus Folder"
+        description="Apakah Anda yakin ingin menghapus folder ini? Folder beserta subfolder dan file di dalamnya akan dipindahkan ke Recycle Bin."
         loading={loadingDelete}
         onCancel={() => {
           setShowConfirm(false);

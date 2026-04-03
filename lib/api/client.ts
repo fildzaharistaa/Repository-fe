@@ -518,6 +518,30 @@ class ApiClient {
   }> {
     return this.request('/access-requests/notifications');
   }
+
+  // Recycle Bin
+  async getRecycleBin(): Promise<{
+    folders: Array<{ id: string; name: string; type: 'folder'; deleted_at: string; parent_id: string | null }>;
+    files: Array<{ id: string; name: string; type: 'file'; mime_type: string; size: number; deleted_at: string; folder_id: string }>;
+  }> {
+    return this.request('/recycle-bin');
+  }
+
+  async restoreFile(id: string): Promise<{ message: string }> {
+    return this.request(`/recycle-bin/restore/file/${id}`, { method: 'PATCH' });
+  }
+
+  async restoreFolder(id: string): Promise<{ message: string }> {
+    return this.request(`/recycle-bin/restore/folder/${id}`, { method: 'PATCH' });
+  }
+
+  async permanentDeleteFile(id: string): Promise<{ message: string }> {
+    return this.request(`/recycle-bin/file/${id}`, { method: 'DELETE' });
+  }
+
+  async permanentDeleteFolder(id: string): Promise<{ message: string }> {
+    return this.request(`/recycle-bin/folder/${id}`, { method: 'DELETE' });
+  }
 }
 
 export const apiClient = new ApiClient();
