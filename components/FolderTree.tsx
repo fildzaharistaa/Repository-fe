@@ -30,6 +30,7 @@ interface FolderItemProps {
   onSelect: (id: string) => void;
   onCreateSubfolder: (parentId: string) => void;
   onDelete: (id: string) => void;
+  depth: number;
 }
 
 function FolderItem({ 
@@ -37,7 +38,8 @@ function FolderItem({
   selectedId, 
   onSelect, 
   onCreateSubfolder,
-  onDelete 
+  onDelete,
+  depth
 }: FolderItemProps) {
   const [expanded, setExpanded] = useState(false);
   const hasChildren = folder.children && folder.children.length > 0;
@@ -78,8 +80,13 @@ function FolderItem({
               e.stopPropagation();
               onCreateSubfolder(folder.id);
             }}
-            className="rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-            title="Create subfolder"
+            disabled={depth >= 5}
+            className={`rounded px-2 py-1 text-xs ${
+              depth >= 5 
+                ? 'text-gray-400 cursor-not-allowed' 
+                : 'text-blue-600 hover:bg-blue-50'
+            }`}
+            title={depth >= 5 ? "Max 5 levels reached" : "Create subfolder"}
           >
             <Plus className="h-3 w-3" />
           </button>
@@ -105,6 +112,7 @@ function FolderItem({
               onSelect={onSelect}
               onCreateSubfolder={onCreateSubfolder}
               onDelete={onDelete}
+              depth={depth + 1}
             />
           ))}
         </div>
@@ -119,7 +127,11 @@ interface FolderTreeProps {
 }
 
 export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps) {
-  const { isAdmin, canCreateFolder } = useAuthContext();
+  const { user, isAdmin, canCreateFolder } = useAuthContext();
+  const roleName = (typeof user?.role === 'object' ? user?.role?.name : user?.role)?.toLowerCase() || '';
+  const isWD1 = roleName === 'wd1';
+  const isWD2 = roleName === 'wd2';
+  const isWD3 = roleName === 'wd3';
   const router = useRouter();
   const pathname = usePathname();
   const { activeMenu, setActiveMenu } = useFolderContext();
@@ -131,6 +143,9 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
   const [loadingDelete, setLoadingDelete] = useState(false);
+  const [shareWithWD1, setShareWithWD1] = useState(isWD1);
+  const [shareWithWD2, setShareWithWD2] = useState(isWD2);
+  const [shareWithWD3, setShareWithWD3] = useState(isWD3);
   const [shareWithDosen, setShareWithDosen] = useState(false);
   const [shareWithTendik, setShareWithTendik] = useState(false);
 
@@ -139,12 +154,18 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
     
     try {
       const shareRoles: string[] = [];
+      if (shareWithWD1) shareRoles.push('wd1');
+      if (shareWithWD2) shareRoles.push('wd2');
+      if (shareWithWD3) shareRoles.push('wd3'); 
       if (shareWithDosen) shareRoles.push('dosen');
       if (shareWithTendik) shareRoles.push('tendik');
 
       await createFolder(newFolderName, parentId || undefined, shareRoles.length > 0 ? shareRoles : undefined);
       setNewFolderName('');
       setParentId(null);
+      setShareWithWD1(isWD1);
+      setShareWithWD2(isWD2);
+      setShareWithWD3(isWD3);
       setShareWithDosen(false);
       setShareWithTendik(false);
       setShowCreateDialog(false);
@@ -375,6 +396,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               }}
               onCreateSubfolder={handleCreateSubfolder}
               onDelete={handleDeleteFolder}
+              depth={1}
             />
           ))
         )}
@@ -405,6 +427,36 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
               <p className="mb-2 text-sm font-medium text-gray-700">Bagikan ke:</p>
               <div className="flex gap-4">
+                <label className={`flex items-center gap-2 ${isWD1 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                  <input
+                    type="checkbox"
+                    checked={shareWithWD1}
+                    onChange={(e) => setShareWithWD1(e.target.checked)}
+                    disabled={isWD1}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:bg-gray-200"
+                  />
+                  <span className="text-sm text-gray-700">WD1</span>
+                </label>
+                <label className={`flex items-center gap-2 ${isWD2 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                  <input
+                    type="checkbox"
+                    checked={shareWithWD2}
+                    onChange={(e) => setShareWithWD2(e.target.checked)}
+                    disabled={isWD2}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:bg-gray-200"
+                  />
+                  <span className="text-sm text-gray-700">WD2</span>
+                </label>
+                <label className={`flex items-center gap-2 ${isWD3 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                  <input
+                    type="checkbox"
+                    checked={shareWithWD3}
+                    onChange={(e) => setShareWithWD3(e.target.checked)}
+                    disabled={isWD3}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:bg-gray-200"
+                  />
+                  <span className="text-sm text-gray-700">WD3</span>
+                </label>      
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -423,6 +475,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   />
                   <span className="text-sm text-gray-700">Tendik</span>
                 </label>
+                
               </div>
             </div>
 
@@ -438,6 +491,9 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   setShowCreateDialog(false);
                   setNewFolderName('');
                   setParentId(null);
+                  setShareWithWD1(isWD1);
+                  setShareWithWD2(isWD2);
+                  setShareWithWD3(isWD3);
                   setShareWithDosen(false);
                   setShareWithTendik(false);
                 }}
