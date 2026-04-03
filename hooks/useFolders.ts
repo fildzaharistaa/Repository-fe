@@ -29,11 +29,12 @@ export function useFolders(adminMode = false) {
     fetchFolders();
   }, [fetchFolders]);
 
-  const createFolder = useCallback(async (name: string, parentId?: string) => {
+  const createFolder = useCallback(async (name: string, parentId?: string, shareWithRoles?: string[]) => {
     try {
       const newFolder = await apiClient.createFolder({
         name,
         parent_id: parentId || null,
+        share_with_roles: shareWithRoles,
       });
       await fetchFolders(); // Refresh tree
       return newFolder;

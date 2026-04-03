@@ -5,7 +5,7 @@ import { useSharedFiles } from '@/hooks/useSharedFiles';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
 import { Eye, Download, FileText, Loader2, X } from 'lucide-react';
-import { formatFileSize, formatDate } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import type { File as FileEntity } from '@/types';
 
 export function SharedFilesView() {
@@ -49,7 +49,7 @@ export function SharedFilesView() {
         <p className="text-sm text-gray-500 mt-1">Files that have been specifically shared with you</p>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm bg-white">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm bg-white">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -70,7 +70,9 @@ export function SharedFilesView() {
                 </td>
               </tr>
             ) : (
-              files.map((file) => (
+              files.map((file) => {
+                const fileInfo = getFileTypeInfo(file.mime_type);
+                return (
                 <tr key={file.id} className="hover:bg-gray-50 transition-colors">
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center">
@@ -78,11 +80,12 @@ export function SharedFilesView() {
                       <div>
                         <button
                           onClick={() => handleQuickView(file)}
-                          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left"
+                          title={file.name}
                         >
-                          {file.name}
+                          <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
                         </button>
-                        <p className="text-xs text-gray-500 truncate max-w-xs">{file.mime_type}</p>
+                        <p className="text-xs text-gray-500">{fileInfo.label}</p>
                       </div>
                     </div>
                   </td>
@@ -112,7 +115,8 @@ export function SharedFilesView() {
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

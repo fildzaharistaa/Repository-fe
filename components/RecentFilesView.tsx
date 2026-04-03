@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Clock, FileText, Download, Eye, Trash2, Folder, X } from 'lucide-react';
 import { useFolders } from '@/hooks/useFolders';
 import { useAllFiles } from '@/hooks/useAllFiles';
-import { formatFileSize, formatDate } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
 import { useFiles } from '@/hooks/useFiles';
@@ -106,7 +106,7 @@ export function RecentFilesView() {
           <h2 className="text-lg font-semibold text-gray-900">Recent Files</h2>
           <p className="text-sm text-gray-500">Your most recently uploaded files</p>
         </div>
-        <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+        <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -128,7 +128,9 @@ export function RecentFilesView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {recentFiles.map((file) => (
+              {recentFiles.map((file) => {
+                const fileInfo = getFileTypeInfo(file.mime_type);
+                return (
                 <tr key={file.id} className="hover:bg-gray-50 transition-colors">
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center">
@@ -136,23 +138,24 @@ export function RecentFilesView() {
                       <div>
                         <button
                           onClick={() => handleQuickView(file)}
-                          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left"
+                          title={file.name}
                         >
-                          {file.name}
+                          <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
                         </button>
-                        <p className="text-xs text-gray-500 truncate max-w-xs">{file.mime_type}</p>
+                        <p className="text-xs text-gray-500">{fileInfo.label}</p>
                       </div>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                      {file.mime_type.split('/')[1]?.toUpperCase() || 'FILE'}
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${fileInfo.badgeClass}`}>
+                      {fileInfo.label}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {formatFileSize(file.size)}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  <td className="whitespace-nowrap px- py-4 text-sm text-gray-500">
                     {formatDate(file.created_at)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -184,7 +187,7 @@ export function RecentFilesView() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

@@ -119,7 +119,7 @@ interface FolderTreeProps {
 }
 
 export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps) {
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, canCreateFolder } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
   const { activeMenu, setActiveMenu } = useFolderContext();
@@ -131,14 +131,22 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
   const [loadingDelete, setLoadingDelete] = useState(false);
+  const [shareWithDosen, setShareWithDosen] = useState(false);
+  const [shareWithTendik, setShareWithTendik] = useState(false);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     
     try {
-      await createFolder(newFolderName, parentId || undefined);
+      const shareRoles: string[] = [];
+      if (shareWithDosen) shareRoles.push('dosen');
+      if (shareWithTendik) shareRoles.push('tendik');
+
+      await createFolder(newFolderName, parentId || undefined, shareRoles.length > 0 ? shareRoles : undefined);
       setNewFolderName('');
       setParentId(null);
+      setShareWithDosen(false);
+      setShareWithTendik(false);
       setShowCreateDialog(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to create folder');
@@ -338,6 +346,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       {/* Folder Management Section - only for non-admin users */}
       {!isAdmin && (
       <div className="flex-1 overflow-y-auto">
+        {canCreateFolder && (
         <div className="border-b border-gray-200 bg-linear-to-r from-gray-50 to-white p-4 space-y-2">
           <button
             onClick={() => setShowCreateDialog(true)}
@@ -346,6 +355,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             + New Folder
           </button>
         </div>
+        )}
         
         <div className="p-2">
         {folders.length === 0 ? (
@@ -390,6 +400,32 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 if (e.key === 'Escape') setShowCreateDialog(false);
               }}
             />
+
+            {/* Share with roles checkboxes */}
+            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="mb-2 text-sm font-medium text-gray-700">Bagikan ke:</p>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shareWithDosen}
+                    onChange={(e) => setShareWithDosen(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">Dosen</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shareWithTendik}
+                    onChange={(e) => setShareWithTendik(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">Tendik</span>
+                </label>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
                 onClick={handleCreateFolder}
@@ -402,6 +438,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   setShowCreateDialog(false);
                   setNewFolderName('');
                   setParentId(null);
+                  setShareWithDosen(false);
+                  setShareWithTendik(false);
                 }}
                 className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
               >

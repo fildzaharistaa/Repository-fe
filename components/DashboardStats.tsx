@@ -143,9 +143,6 @@ export function DashboardStats() {
 
             {previousFiles.length > 0 && (
               <div>
-                <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                  Sebelumnya
-                </h4>
                 <div className="space-y-3">
                   {previousFiles.map((file) => (
                     <div

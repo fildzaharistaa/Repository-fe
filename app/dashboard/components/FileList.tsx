@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, DragEvent } from 'react';
+import { useState, useEffect, useRef, DragEvent } from 'react';
 import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2 } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
-import { formatFileSize, formatDate } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
+import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -16,7 +17,18 @@ interface FileListProps {
 
 export function FileList({ folderId }: FileListProps) {
   const { files, loading, error, deleteFile, downloadFile, uploadFile } = useFiles(folderId);
+  const [folderName, setFolderName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
+
+  useEffect(() => {
+    if (folderId) {
+      apiClient.getFolder(folderId)
+        .then(folder => setFolderName(folder.name))
+        .catch(err => console.error('Failed to fetch folder name', err));
+    } else {
+      setFolderName(null);
+    }
+  }, [folderId]);
   const [showQuickView, setShowQuickView] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -120,7 +132,7 @@ export function FileList({ folderId }: FileListProps) {
         <div className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Files</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
               <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
             </div>
             {folderId && (
@@ -134,7 +146,7 @@ export function FileList({ folderId }: FileListProps) {
             )}
           </div>
           
-          <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -165,7 +177,9 @@ export function FileList({ folderId }: FileListProps) {
                     </td>
                   </tr>
                 ) : (
-                  files.map((file) => (
+                  files.map((file) => {
+                    const fileInfo = getFileTypeInfo(file.mime_type);
+                    return (
                     <tr key={file.id} className="hover:bg-gray-50 transition-colors">
                     <td className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center">
@@ -173,17 +187,18 @@ export function FileList({ folderId }: FileListProps) {
                         <div>
                           <button
                             onClick={() => handleQuickView(file)}
-                            className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                            className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left"
+                            title={file.name}
                           >
-                            {file.name}
+                            <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
                           </button>
-                          <p className="text-xs text-gray-500 truncate max-w-xs">{file.mime_type}</p>
+                          <p className="text-xs text-gray-500">{fileInfo.label}</p>
                         </div>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                        {file.mime_type.split('/')[1]?.toUpperCase() || 'FILE'}
+                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${fileInfo.badgeClass}`}>
+                        {fileInfo.label}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
@@ -221,7 +236,8 @@ export function FileList({ folderId }: FileListProps) {
                       </div>
                     </td>
                   </tr>
-                  ))
+                  );
+                })
                 )}
               </tbody>
             </table>

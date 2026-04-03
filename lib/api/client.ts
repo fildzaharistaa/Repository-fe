@@ -206,6 +206,7 @@ class ApiClient {
   async createFolder(data: {
     name: string;
     parent_id?: string | null;
+    share_with_roles?: string[];
   }): Promise<Folder> {
     return this.request<Folder>('/folders', {
       method: 'POST',
