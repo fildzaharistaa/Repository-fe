@@ -16,7 +16,10 @@ import {
   FolderOpen,
   Share2,
   FileText,
-  Trash2
+  Trash2,
+  Edit2,
+  Search,
+  Check
 } from 'lucide-react';
 import Image from 'next/image';
 import { useFolders } from '@/hooks/useFolders';
@@ -24,12 +27,15 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
+import { apiClient } from '@/lib/api/client';
+import toast from 'react-hot-toast';
 
 interface FolderItemProps {
   folder: FolderTreeNode;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreateSubfolder: (parentId: string) => void;
+  onEdit: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   depth: number;
 }
@@ -39,6 +45,7 @@ function FolderItem({
   selectedId, 
   onSelect, 
   onCreateSubfolder,
+  onEdit,
   onDelete,
   depth
 }: FolderItemProps) {
@@ -94,6 +101,16 @@ function FolderItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              onEdit(folder.id, folder.name);
+            }}
+            className="rounded px-2 py-1 text-xs text-amber-600 hover:bg-amber-50"
+            title="Edit folder"
+          >
+            <Edit2 className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
               onDelete(folder.id);
             }}
             className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
@@ -112,6 +129,7 @@ function FolderItem({
               selectedId={selectedId}
               onSelect={onSelect}
               onCreateSubfolder={onCreateSubfolder}
+              onEdit={onEdit}
               onDelete={onDelete}
               depth={depth + 1}
             />
@@ -150,34 +168,97 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [shareWithDosen, setShareWithDosen] = useState(false);
   const [shareWithTendik, setShareWithTendik] = useState(false);
 
+  // New states for enhanced modal
+  const [editFolderId, setEditFolderId] = useState<string | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+
+  // Default permissions for simplicity in demo
+  const [userPermissions, setUserPermissions] = useState<Record<string, {create:boolean, read:boolean, update:boolean, delete:boolean}>>({});
+
+  // Fetch users when component mounts (or when modal opens)
+  useState(() => {
+    apiClient.getUsers()
+      .then(res => {
+        const fetchedUsers = res.data || res;
+        if (Array.isArray(fetchedUsers)) {
+          setUsers(fetchedUsers);
+        } else {
+          setUsers([]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch users:', err);
+        setUsers([]);
+      });
+  });
+
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     
     try {
       const shareRoles: string[] = [];
-      if (shareWithWD1) shareRoles.push('wd1');
-      if (shareWithWD2) shareRoles.push('wd2');
-      if (shareWithWD3) shareRoles.push('wd3'); 
-      if (shareWithDosen) shareRoles.push('dosen');
-      if (shareWithTendik) shareRoles.push('tendik');
+      if (shareWithWD1) shareRoles.push('Wakil Dekan 1');
+      if (shareWithWD2) shareRoles.push('Wakil Dekan 2');
+      if (shareWithWD3) shareRoles.push('Wakil Dekan 3'); 
+      if (shareWithDosen) shareRoles.push('Dosen');
+      if (shareWithTendik) shareRoles.push('Tendik');
 
-      await createFolder(newFolderName, parentId || undefined, shareRoles.length > 0 ? shareRoles : undefined);
-      setNewFolderName('');
-      setParentId(null);
-      setShareWithWD1(isWD1);
-      setShareWithWD2(isWD2);
-      setShareWithWD3(isWD3);
-      setShareWithDosen(false);
-      setShareWithTendik(false);
-      setShowCreateDialog(false);
+      const uPerms = Object.entries(userPermissions)
+        .map(([userId, perms]) => ({
+          user_id: userId,
+          can_read: perms.read,
+          can_create: perms.create,
+          can_update: perms.update,
+          can_delete: perms.delete,
+        }))
+        .filter(p => p.can_read || p.can_create || p.can_update || p.can_delete);
+
+      if (editFolderId) {
+        await apiClient.updateFolder(editFolderId, {
+          name: newFolderName,
+          share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
+          user_permissions: uPerms.length > 0 ? uPerms : undefined
+        });
+        toast.success('Folder berhasil diubah dan permission diperbarui');
+      } else {
+        await createFolder(newFolderName, parentId || undefined, shareRoles.length > 0 ? shareRoles : undefined, uPerms.length > 0 ? uPerms : undefined);
+        toast.success('Folder berhasil dibuat');
+      }
+
+      refresh();
+      resetModal();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create folder');
+      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan folder');
     }
+  };
+
+  const resetModal = () => {
+    setNewFolderName('');
+    setParentId(null);
+    setEditFolderId(null);
+    setShareWithWD1(isWD1);
+    setShareWithWD2(isWD2);
+    setShareWithWD3(isWD3);
+    setShareWithDosen(false);
+    setShareWithTendik(false);
+    setShowCreateDialog(false);
+    setUserSearchTerm('');
+    setSelectedRoleFilter(null);
   };
 
   const handleDeleteFolder = (id: string) => {
     setPermissionToDelete(id);
     setShowConfirm(true);
+  };
+
+  const handleEditFolder = (id: string, name: string) => {
+    setEditFolderId(id);
+    setNewFolderName(name);
+    // You could fetch current folder permissions here to pre-check the boxes
+    setShowCreateDialog(true);
   };
 
   const confirmDeleteFolder = async () => {
@@ -188,11 +269,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       await deleteFolder(permissionToDelete);
       refresh();
-
+      toast.success('Folder dipindahkan ke Recycle Bin');
       setShowConfirm(false);
       setPermissionToDelete(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete folder');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete folder');
     } finally {
       setLoadingDelete(false);
     }
@@ -200,7 +281,49 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
   const handleCreateSubfolder = (parentId: string) => {
     setParentId(parentId);
+    setEditFolderId(null);
+    setNewFolderName('');
     setShowCreateDialog(true);
+  };
+
+  const formatRoleName = (raw: string) => {
+    if (!raw) return 'User';
+    const norm = raw.toLowerCase().trim();
+    if (norm === 'wd1' || norm === 'wd 1') return 'Wakil Dekan 1';
+    if (norm === 'wd2' || norm === 'wd 2') return 'Wakil Dekan 2';
+    if (norm === 'wd3' || norm === 'wd 3') return 'Wakil Dekan 3';
+    if (norm === 'dosen') return 'Dosen';
+    if (norm === 'tendik') return 'Tendik';
+    if (norm.includes('super')) return 'Super Admin';
+    if (norm === 'admin') return 'Admin';
+    // Capitalize first letter for fallback
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  };
+
+  // Stats for the roles sidebar
+  const roleStats = users.reduce((acc, user) => {
+    const rName = formatRoleName(typeof user.role === 'object' ? user.role?.name : user.role);
+    if (!acc[rName]) acc[rName] = 0;
+    acc[rName]++;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const filteredUsers = users.filter(u => {
+    const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+    const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
+    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                          (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
+    return matchesRole && matchesSearch;
+  });
+
+  const toggleUserPermission = (userId: string, perm: keyof {create:boolean, read:boolean, update:boolean, delete:boolean}) => {
+    setUserPermissions(prev => {
+      const current = prev[userId] || { create: false, read: false, update: false, delete: false };
+      return {
+        ...prev,
+        [userId]: { ...current, [perm]: !current[perm] }
+      };
+    });
   };
 
   if (loading) {
@@ -413,6 +536,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 setActiveMenu(null);
               }}
               onCreateSubfolder={handleCreateSubfolder}
+              onEdit={handleEditFolder}
               onDelete={handleDeleteFolder}
               depth={1}
             />
@@ -423,102 +547,188 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       )}
 
       {showCreateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 text-black">
-            <h3 className="mb-4 text-lg font-semibold">
-              {parentId ? 'Create Subfolder' : 'Create Folder'}
-            </h3>
-            <input
-              type="text"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Folder name"
-              className="mb-4 w-full rounded-md border border-gray-300 px-3 py-2 text-black"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreateFolder();
-                if (e.key === 'Escape') setShowCreateDialog(false);
-              }}
-            />
-
-            {/* Share with roles checkboxes */}
-            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="mb-2 text-sm font-medium text-gray-700">Bagikan ke:</p>
-              <div className="flex gap-4">
-                <label className={`flex items-center gap-2 ${isWD1 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-                  <input
-                    type="checkbox"
-                    checked={shareWithWD1}
-                    onChange={(e) => setShareWithWD1(e.target.checked)}
-                    disabled={isWD1}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:bg-gray-200"
-                  />
-                  <span className="text-sm text-gray-700">WD1</span>
-                </label>
-                <label className={`flex items-center gap-2 ${isWD2 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-                  <input
-                    type="checkbox"
-                    checked={shareWithWD2}
-                    onChange={(e) => setShareWithWD2(e.target.checked)}
-                    disabled={isWD2}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:bg-gray-200"
-                  />
-                  <span className="text-sm text-gray-700">WD2</span>
-                </label>
-                <label className={`flex items-center gap-2 ${isWD3 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-                  <input
-                    type="checkbox"
-                    checked={shareWithWD3}
-                    onChange={(e) => setShareWithWD3(e.target.checked)}
-                    disabled={isWD3}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:bg-gray-200"
-                  />
-                  <span className="text-sm text-gray-700">WD3</span>
-                </label>      
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={shareWithDosen}
-                    onChange={(e) => setShareWithDosen(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                  />
-                  <span className="text-sm text-gray-700">Dosen</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={shareWithTendik}
-                    onChange={(e) => setShareWithTendik(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                  />
-                  <span className="text-sm text-gray-700">Tendik</span>
-                </label>
-                
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 p-4 backdrop-blur-sm">
+          <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            {/* Header Modal */}
+            <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">
+                {editFolderId ? 'Edit Folder & Permission' : (parentId ? 'Create Subfolder' : 'Create Folder')}
+              </h3>
+              <button 
+                onClick={resetModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleCreateFolder}
-                className="flex-1 rounded-md bg-orange-600 px-4 py-2 text-white hover:bg-orange-700"
-              >
-                Create
-              </button>
-              <button
-                onClick={() => {
-                  setShowCreateDialog(false);
-                  setNewFolderName('');
-                  setParentId(null);
-                  setShareWithWD1(isWD1);
-                  setShareWithWD2(isWD2);
-                  setShareWithWD3(isWD3);
-                  setShareWithDosen(false);
-                  setShareWithTendik(false);
-                }}
-                className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
+            <div className="flex flex-col md:flex-row h-[500px]">
+              {/* Left Sidebar - Configurations */}
+              <div className="w-full md:w-1/3 border-r border-gray-100 bg-white p-6 overflow-y-auto">
+                <div className="mb-6">
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Nama Folder</label>
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Masukkan nama folder"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-black focus:border-orange-500 focus:ring-orange-500 focus:outline-hidden"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
+                  <p className="text-xs text-gray-500 mb-3">Pilih role untuk membagikan akses keseluruhan ke folder ini.</p>
+                  
+                  <div className="space-y-2">
+                    {[
+                      { id: 'wd1', label: 'Wakil Dekan 1', checked: shareWithWD1, set: setShareWithWD1, disabled: isWD1 },
+                      { id: 'wd2', label: 'Wakil Dekan 2', checked: shareWithWD2, set: setShareWithWD2, disabled: isWD2 },
+                      { id: 'wd3', label: 'Wakil Dekan 3', checked: shareWithWD3, set: setShareWithWD3, disabled: isWD3 },
+                      { id: 'dosen', label: 'Dosen FIK', checked: shareWithDosen, set: setShareWithDosen, disabled: false },
+                      { id: 'tendik', label: 'Tenaga Kependidikan', checked: shareWithTendik, set: setShareWithTendik, disabled: false },
+                    ].map(role => (
+                      <label key={role.id} className={`flex items-center gap-3 p-2 rounded-md border text-sm ${role.checked ? 'border-orange-200 bg-orange-50' : 'border-gray-200 hover:bg-gray-50'} ${role.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                        <input
+                          type="checkbox"
+                          checked={role.checked}
+                          onChange={(e) => role.set(e.target.checked)}
+                          disabled={role.disabled}
+                          className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="font-medium text-gray-700">{role.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Content - User Permission Table */}
+              <div className="w-full md:w-2/3 flex flex-col bg-gray-50">
+                <div className="p-4 border-b border-gray-200 bg-white">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Spesifik User Permission (Optional)</h4>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Cari nama atau email..." 
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 shadow-sm"
+                      />
+                    </div>
+                    <div className="relative w-full sm:w-1/3">
+                      <button 
+                        type="button"
+                        onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                        className="flex items-center justify-between w-full py-2 px-3 text-sm border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        <span className="truncate font-medium text-gray-700">
+                          {selectedRoleFilter || 'Semua Role'}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </button>
+                      
+                      {showRoleDropdown && (
+                        <div className="absolute z-10 mt-1.5 w-full bg-white shadow-xl max-h-60 rounded-lg py-1 border border-gray-100 overflow-auto focus:outline-none">
+                          <button
+                            onClick={() => { setSelectedRoleFilter(null); setShowRoleDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${!selectedRoleFilter ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <span className="text-sm font-semibold selection:bg-transparent">Semua Role</span>
+                            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-[10px] font-bold">{users.length}</span>
+                          </button>
+                          {Object.keys(roleStats).map(role => (
+                            <button
+                              key={role}
+                              onClick={() => { setSelectedRoleFilter(role); setShowRoleDropdown(false); }}
+                              className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${role === selectedRoleFilter ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                              <span className="text-sm font-semibold truncate pr-2 selection:bg-transparent">{role}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${role === selectedRoleFilter ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {roleStats[role]}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <table className="w-full text-left text-sm text-gray-600">
+                      <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Read</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Write</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Edit</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Del</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">
+                              Tidak ada user yang ditemukan
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredUsers.map((u) => {
+                            const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+                            const perms = userPermissions[u.id] || { create: false, read: false, update: false, delete: false };
+                            return (
+                              <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-gray-900">{u.name}</div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
+                                    <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.update} onChange={() => toggleUserPermission(u.id, 'update')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.delete} onChange={() => toggleUserPermission(u.id, 'delete')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 bg-white p-4 flex gap-3 justify-end items-center">
+                  <button
+                    onClick={resetModal}
+                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleCreateFolder}
+                    disabled={!newFolderName.trim()}
+                    className="flex items-center gap-2 rounded-md bg-orange-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Check className="h-4 w-4" />
+                    {editFolderId ? 'Simpan Perubahan' : 'Buat Folder'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

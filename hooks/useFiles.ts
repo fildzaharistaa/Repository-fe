@@ -71,6 +71,18 @@ export function useFiles(folderId: string | null) {
     }
   }, []);
 
+  const renameFile = useCallback(async (id: string, name: string) => {
+    try {
+      setLoading(true);
+      await apiClient.renameFile(id, name);
+      await fetchFiles(); // Refresh list
+    } catch (err) {
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchFiles]);
+
   return {
     files,
     loading,
@@ -79,6 +91,7 @@ export function useFiles(folderId: string | null) {
     uploadFile,
     deleteFile,
     downloadFile,
+    renameFile,
   };
 }
 
