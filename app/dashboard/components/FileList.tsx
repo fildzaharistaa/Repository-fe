@@ -46,14 +46,14 @@ export function FileList({ folderId }: FileListProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
-  const [showShareSuccess, setShowShareSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   // States for Share Modal
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
-  const [userPermissions, setUserPermissions] = useState<Record<string, {read:boolean, write:boolean, edit:boolean, del:boolean}>>({});
+  const [userPermissions, setUserPermissions] = useState<Record<string, {create:boolean, read:boolean, update:boolean, delete:boolean}>>({});
   const [shareWithWD1, setShareWithWD1] = useState(false);
   const [shareWithWD2, setShareWithWD2] = useState(false);
   const [shareWithWD3, setShareWithWD3] = useState(false);
@@ -99,9 +99,9 @@ export function FileList({ folderId }: FileListProps) {
     return matchesRole && matchesSearch;
   });
 
-  const toggleUserPermission = (userId: string, perm: keyof {read:boolean, write:boolean, edit:boolean, del:boolean}) => {
+  const toggleUserPermission = (userId: string, perm: keyof {create:boolean, read:boolean, update:boolean, delete:boolean}) => {
     setUserPermissions(prev => {
-      const current = prev[userId] || { read: false, write: false, edit: false, del: false };
+      const current = prev[userId] || { create: false, read: false, update: false, delete: false };
       return {
         ...prev,
         [userId]: { ...current, [perm]: !current[perm] }
@@ -158,7 +158,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setRenameLoading(true);
       await renameFile(fileToRename.id, finalName);
-      toast.success('File berhasil direname');
+      setSuccessMessage(`File berhasil diganti nama menjadi "${finalName}"`);
       setShowRenameModal(false);
       setFileToRename(null);
     } catch (err: any) {
@@ -177,9 +177,30 @@ export function FileList({ folderId }: FileListProps) {
     if (!fileToShare) return;
     try {
       setShareLoading(true);
-      // Simulate sharing functionality (e.g. creating access requests or sharing links)
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setShowShareSuccess(true);
+      
+      const shareRoles: string[] = [];
+      if (shareWithWD1) shareRoles.push('Wakil Dekan 1');
+      if (shareWithWD2) shareRoles.push('Wakil Dekan 2');
+      if (shareWithWD3) shareRoles.push('Wakil Dekan 3');
+      if (shareWithDosen) shareRoles.push('Dosen');
+      if (shareWithTendik) shareRoles.push('Tendik');
+
+      const uPerms = Object.entries(userPermissions)
+        .map(([userId, perms]) => ({
+          user_id: userId,
+          can_read: perms.read,
+          can_create: perms.create,
+          can_update: perms.update,
+          can_delete: perms.delete,
+        }))
+        .filter(p => p.can_read || p.can_create || p.can_update || p.can_delete);
+
+      await apiClient.shareFile(fileToShare.id, {
+        share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
+        user_permissions: uPerms.length > 0 ? uPerms : undefined
+      });
+
+      setSuccessMessage(`File "${fileToShare.name}" berhasil dibagikan ke pengguna dan grup yang Anda pilih.`);
       setShowShareModal(false);
     } catch (err) {
       toast.error('Gagal membagikan file');
@@ -193,7 +214,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setDeleteLoading(true);
       await deleteFile(fileToDelete.id);
-      toast.success(`"${fileToDelete.name}" dipindahkan ke Recycle Bin`);
+      setSuccessMessage(`File "${fileToDelete.name}" telah dupindahkan ke Recycle Bin.`);
       setShowDeleteConfirm(false);
       setFileToDelete(null);
     } catch (err) {
@@ -216,7 +237,7 @@ export function FileList({ folderId }: FileListProps) {
         await uploadFile(files[i]);
       }
 
-      toast.success('Files uploaded successfully');
+      setSuccessMessage(`${files.length} File berhasil diunggah.`);
       setShowUploadModal(false);
 
     } catch (err) {
@@ -702,10 +723,10 @@ export function FileList({ folderId }: FileListProps) {
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
                           <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Read</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Write</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Edit</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Del</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">CREATE</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">READ</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">EDIT</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">DELETE</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -718,7 +739,7 @@ export function FileList({ folderId }: FileListProps) {
                         ) : (
                           filteredUsers.map((u) => {
                             const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-                            const perms = userPermissions[u.id] || { read: false, write: false, edit: false, del: false };
+                            const perms = userPermissions[u.id] || { create: false, read: false, update: false, delete: false };
                             return (
                               <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3">
@@ -729,16 +750,16 @@ export function FileList({ folderId }: FileListProps) {
                                   </div>
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.write} onChange={() => toggleUserPermission(u.id, 'write')} className="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.edit} onChange={() => toggleUserPermission(u.id, 'edit')} className="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.update} onChange={() => toggleUserPermission(u.id, 'update')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.del} onChange={() => toggleUserPermission(u.id, 'del')} className="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.delete} onChange={() => toggleUserPermission(u.id, 'delete')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                               </tr>
                             );
@@ -785,18 +806,18 @@ export function FileList({ folderId }: FileListProps) {
       />
 
       {/* Success Modal */}
-      {showShareSuccess && (
+      {successMessage && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
               <Check className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses Dibagikan!</h3>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
             <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              File <span className="text-gray-800 font-bold">{fileToShare?.name}</span> berhasil dibagikan ke pengguna dan grup terkait yang Anda pilih.
+              {successMessage}
             </p>
             <button
-              onClick={() => { setShowShareSuccess(false); setFileToShare(null); }}
+              onClick={() => { setSuccessMessage(null); setFileToShare(null); }}
               className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all"
             >
               Tutup Jendela

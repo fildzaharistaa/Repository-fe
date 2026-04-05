@@ -162,6 +162,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
   const [loadingDelete, setLoadingDelete] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [shareWithWD1, setShareWithWD1] = useState(isWD1);
   const [shareWithWD2, setShareWithWD2] = useState(isWD2);
   const [shareWithWD3, setShareWithWD3] = useState(isWD3);
@@ -222,10 +223,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
           user_permissions: uPerms.length > 0 ? uPerms : undefined
         });
-        toast.success('Folder berhasil diubah dan permission diperbarui');
+        setSuccessMessage(`Eksekusi pengaturan Folder "${newFolderName}" sukses diperbarui.`);
       } else {
         await createFolder(newFolderName, parentId || undefined, shareRoles.length > 0 ? shareRoles : undefined, uPerms.length > 0 ? uPerms : undefined);
-        toast.success('Folder berhasil dibuat');
+        setSuccessMessage(`Folder "${newFolderName}" telah berhasil diciptakan.`);
       }
 
       refresh();
@@ -269,7 +270,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       await deleteFolder(permissionToDelete);
       refresh();
-      toast.success('Folder dipindahkan ke Recycle Bin');
+      setSuccessMessage('Folder telah berhasil dipindahkan ke Recycle Bin.');
       setShowConfirm(false);
       setPermissionToDelete(null);
     } catch (err) {
@@ -665,10 +666,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
                           <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Read</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Write</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Create</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">View</th>
                           <th className="px-2 py-3 font-semibold text-center w-16">Edit</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Del</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Delete</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -692,10 +693,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                                   </div>
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
                                   <input type="checkbox" checked={perms.update} onChange={() => toggleUserPermission(u.id, 'update')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
@@ -744,6 +745,27 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         }}
         onConfirm={confirmDeleteFolder}
       />
+
+      {/* Success Modal */}
+      {successMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              {successMessage}
+            </p>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-orange-700 hover:shadow-lg transition-all"
+            >
+              Tutup Jendela
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

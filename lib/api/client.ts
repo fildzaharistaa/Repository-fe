@@ -319,6 +319,16 @@ class ApiClient {
     });
   }
 
+  async shareFile(
+    id: string,
+    data: { share_with_roles?: string[]; user_permissions?: any[] }
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/access-requests/files/${id}/share`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async downloadFile(id: string): Promise<Blob> {
     const token = this.getToken();
     if (!token) {
