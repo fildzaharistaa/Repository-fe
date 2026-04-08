@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, DragEvent } from 'react';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2 } from 'lucide-react';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import { handleApiError } from '@/lib/utils/errorHandler';
@@ -17,7 +17,7 @@ interface FileListProps {
 }
 
 export function FileList({ folderId }: FileListProps) {
-  const { files, loading, error, deleteFile, downloadFile, uploadFile } = useFiles(folderId);
+  const { files, loading, error, deleteFile, downloadFile, uploadFile, renameFile } = useFiles(folderId);
   const [folderName, setFolderName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
 
@@ -37,6 +37,91 @@ export function FileList({ folderId }: FileListProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileEntity | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [fileToRename, setFileToRename] = useState<FileEntity | null>(null);
+  const [newFileName, setNewFileName] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
+
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+
+  // States for Share Modal
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<Record<string, {create:boolean, read:boolean, update:boolean, delete:boolean}>>({});
+  const [shareWithWD1, setShareWithWD1] = useState(false);
+  const [shareWithWD2, setShareWithWD2] = useState(false);
+  const [shareWithWD3, setShareWithWD3] = useState(false);
+  const [shareWithDosen, setShareWithDosen] = useState(false);
+  const [shareWithTendik, setShareWithTendik] = useState(false);
+
+  useEffect(() => {
+    if (showShareModal) {
+      apiClient.getUsers()
+        .then(res => {
+          const fetchedUsers = res.data || res;
+          if (Array.isArray(fetchedUsers)) setUsers(fetchedUsers);
+        })
+        .catch(err => console.error(err));
+    }
+  }, [showShareModal]);
+
+  const formatRoleName = (raw: string) => {
+    if (!raw) return 'User';
+    const norm = raw.toLowerCase().trim();
+    if (norm === 'wd1' || norm === 'wd 1') return 'Wakil Dekan 1';
+    if (norm === 'wd2' || norm === 'wd 2') return 'Wakil Dekan 2';
+    if (norm === 'wd3' || norm === 'wd 3') return 'Wakil Dekan 3';
+    if (norm === 'dosen') return 'Dosen';
+    if (norm === 'tendik') return 'Tendik';
+    if (norm.includes('super')) return 'Super Admin';
+    if (norm === 'admin') return 'Admin';
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  };
+
+  const roleStats = users.reduce((acc, user) => {
+    const rName = formatRoleName(typeof user.role === 'object' ? user.role?.name : user.role);
+    if (!acc[rName]) acc[rName] = 0;
+    acc[rName]++;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const filteredUsers = users.filter(u => {
+    const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+    const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
+    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                          (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
+    return matchesRole && matchesSearch;
+  });
+
+  const toggleUserPermission = (userId: string, perm: keyof {create:boolean, read:boolean, update:boolean, delete:boolean}) => {
+    setUserPermissions(prev => {
+      const current = prev[userId] || { create: false, read: false, update: false, delete: false };
+      return {
+        ...prev,
+        [userId]: { ...current, [perm]: !current[perm] }
+      };
+    });
+  };
+
+  const resetShareModal = () => {
+    setShowShareModal(false);
+    setFileToShare(null);
+    setUserSearchTerm('');
+    setSelectedRoleFilter(null);
+    setUserPermissions({});
+    setShareWithWD1(false);
+    setShareWithWD2(false);
+    setShareWithWD3(false);
+    setShareWithDosen(false);
+    setShareWithTendik(false);
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownload = async (file: FileEntity) => {
@@ -48,8 +133,80 @@ export function FileList({ folderId }: FileListProps) {
   };
 
   const handleDelete = (file: FileEntity) => {
+    setFileToRename(null);
     setFileToDelete(file);
     setShowDeleteConfirm(true);
+  };
+
+  const handleRenameClick = (file: FileEntity) => {
+    setFileToRename(file);
+    // Extract base name without extension
+    const lastDotIndex = file.name.lastIndexOf('.');
+    const baseName = lastDotIndex !== -1 ? file.name.substring(0, lastDotIndex) : file.name;
+    setNewFileName(baseName);
+    setShowRenameModal(true);
+  };
+
+  const confirmRename = async () => {
+    if (!fileToRename || !newFileName.trim()) return;
+    
+    // Add extension back
+    const lastDotIndex = fileToRename.name.lastIndexOf('.');
+    const ext = lastDotIndex !== -1 ? fileToRename.name.substring(lastDotIndex) : '';
+    const finalName = `${newFileName}${ext}`;
+
+    try {
+      setRenameLoading(true);
+      await renameFile(fileToRename.id, finalName);
+      setSuccessMessage(`File berhasil diganti nama menjadi "${finalName}"`);
+      setShowRenameModal(false);
+      setFileToRename(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal mengubah nama file');
+    } finally {
+      setRenameLoading(false);
+    }
+  };
+
+  const handleShareClick = (file: FileEntity) => {
+    setFileToShare(file);
+    setShowShareModal(true);
+  };
+
+  const handleShareSubmit = async () => {
+    if (!fileToShare) return;
+    try {
+      setShareLoading(true);
+      
+      const shareRoles: string[] = [];
+      if (shareWithWD1) shareRoles.push('Wakil Dekan 1');
+      if (shareWithWD2) shareRoles.push('Wakil Dekan 2');
+      if (shareWithWD3) shareRoles.push('Wakil Dekan 3');
+      if (shareWithDosen) shareRoles.push('Dosen');
+      if (shareWithTendik) shareRoles.push('Tendik');
+
+      const uPerms = Object.entries(userPermissions)
+        .map(([userId, perms]) => ({
+          user_id: userId,
+          can_read: perms.read,
+          can_create: perms.create,
+          can_update: perms.update,
+          can_delete: perms.delete,
+        }))
+        .filter(p => p.can_read || p.can_create || p.can_update || p.can_delete);
+
+      await apiClient.shareFile(fileToShare.id, {
+        share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
+        user_permissions: uPerms.length > 0 ? uPerms : undefined
+      });
+
+      setSuccessMessage(`File "${fileToShare.name}" berhasil dibagikan ke pengguna dan grup yang Anda pilih.`);
+      setShowShareModal(false);
+    } catch (err) {
+      toast.error('Gagal membagikan file');
+    } finally {
+      setShareLoading(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -57,7 +214,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setDeleteLoading(true);
       await deleteFile(fileToDelete.id);
-      toast.success(`"${fileToDelete.name}" dipindahkan ke Recycle Bin`);
+      setSuccessMessage(`File "${fileToDelete.name}" telah dupindahkan ke Recycle Bin.`);
       setShowDeleteConfirm(false);
       setFileToDelete(null);
     } catch (err) {
@@ -80,7 +237,7 @@ export function FileList({ folderId }: FileListProps) {
         await uploadFile(files[i]);
       }
 
-      toast.success('Files uploaded successfully');
+      setSuccessMessage(`${files.length} File berhasil diunggah.`);
       setShowUploadModal(false);
 
     } catch (err) {
@@ -232,6 +389,22 @@ export function FileList({ folderId }: FileListProps) {
                           View
                         </button>
                         <button
+                          onClick={() => handleShareClick(file)}
+                          className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
+                          title="Share File"
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          Share
+                        </button>
+                        <button
+                          onClick={() => handleRenameClick(file)}
+                          className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
+                          title="Rename File"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Rename
+                        </button>
+                        <button
                           onClick={() => handleDownload(file)}
                           className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
                           title="Download"
@@ -374,6 +547,251 @@ export function FileList({ folderId }: FileListProps) {
         </div>
       )}
 
+      {/* Rename Modal */}
+      {showRenameModal && fileToRename && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 p-4 backdrop-blur-md"
+          onClick={() => !renameLoading && setShowRenameModal(false)}
+        >
+          <div 
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">Rename File</h3>
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Nama File Baru</label>
+              <div className="flex rounded-md shadow-sm">
+                <input
+                  type="text"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  className="block w-full flex-1 rounded-l-md border-gray-300 border px-3 py-2 text-black focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') confirmRename();
+                    if (e.key === 'Escape') setShowRenameModal(false);
+                  }}
+                />
+                <span className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
+                  {fileToRename.name.substring(fileToRename.name.lastIndexOf('.'))}
+                </span>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowRenameModal(false)}
+                disabled={renameLoading}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmRename}
+                disabled={renameLoading || !newFileName.trim()}
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+              >
+                {renameLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Tersimpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && fileToShare && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 p-4 backdrop-blur-sm"
+          onClick={() => !shareLoading && resetShareModal()}
+        >
+          <div 
+            className="flex w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Modal */}
+            <div className="flex items-center justify-between border-b border-gray-100 bg-indigo-50 px-6 py-4">
+              <div className="flex items-center gap-3 text-indigo-700">
+                 <Share2 className="h-5 w-5" />
+                 <h3 className="text-lg font-bold text-gray-900">Bagikan File</h3>
+              </div>
+              <button
+                onClick={resetShareModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col md:flex-row h-[500px]">
+              {/* Left Sidebar - Configurations */}
+              <div className="w-full md:w-1/3 border-r border-gray-100 bg-white p-6 overflow-y-auto">
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Informasi File</label>
+                  <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 flex items-start gap-3">
+                    <FileText className="h-6 w-6 text-gray-500 shrink-0 mt-0.5" />
+                    <div className="overflow-hidden">
+                      <p className="truncate font-medium text-gray-900 text-sm" title={fileToShare.name}>{fileToShare.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{formatFileSize(fileToShare.size)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
+                  <p className="text-xs text-gray-500 mb-3">Pilih role untuk membagikan akses keseluruhan ke file ini.</p>
+                  
+                  <div className="space-y-2">
+                    {[
+                      { id: 'wd1', label: 'Wakil Dekan 1', checked: shareWithWD1, set: setShareWithWD1 },
+                      { id: 'wd2', label: 'Wakil Dekan 2', checked: shareWithWD2, set: setShareWithWD2 },
+                      { id: 'wd3', label: 'Wakil Dekan 3', checked: shareWithWD3, set: setShareWithWD3 },
+                      { id: 'dosen', label: 'Dosen', checked: shareWithDosen, set: setShareWithDosen },
+                      { id: 'tendik', label: 'Tendik', checked: shareWithTendik, set: setShareWithTendik },
+                    ].map(role => (
+                      <label key={role.id} className={`flex items-center gap-3 p-2 rounded-md border text-sm cursor-pointer ${role.checked ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={role.checked}
+                          onChange={(e) => role.set(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="font-medium text-gray-700">{role.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Content - User Permission Table */}
+              <div className="w-full md:w-2/3 flex flex-col bg-gray-50">
+                <div className="p-4 border-b border-gray-200 bg-white">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Spesifik User Permission (Optional)</h4>
+                  
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Cari nama atau email..." 
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                      />
+                    </div>
+                    <div className="relative w-full sm:w-1/3">
+                      <button 
+                        type="button"
+                        onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                        className="flex items-center justify-between w-full py-2 px-3 text-sm border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        <span className="truncate font-medium text-gray-700">
+                          {selectedRoleFilter || 'Semua Role'}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </button>
+                      
+                      {showRoleDropdown && (
+                        <div className="absolute z-10 mt-1.5 w-full bg-white shadow-xl max-h-60 rounded-lg py-1 border border-gray-100 overflow-auto focus:outline-none">
+                          <button
+                            onClick={() => { setSelectedRoleFilter(null); setShowRoleDropdown(false); }}
+                            className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${!selectedRoleFilter ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <span className="text-sm font-semibold selection:bg-transparent">Semua Role</span>
+                            <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-[10px] font-bold">{users.length}</span>
+                          </button>
+                          {Object.keys(roleStats).map(role => (
+                            <button
+                              key={role}
+                              onClick={() => { setSelectedRoleFilter(role); setShowRoleDropdown(false); }}
+                              className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${role === selectedRoleFilter ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                              <span className="text-sm font-semibold truncate pr-2 selection:bg-transparent">{role}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${role === selectedRoleFilter ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {roleStats[role]}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <table className="w-full text-left text-sm text-gray-600">
+                      <thead className="bg-gray-100 text-xs uppercase text-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">CREATE</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">READ</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">EDIT</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">DELETE</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">
+                              Tidak ada user yang ditemukan
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredUsers.map((u) => {
+                            const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+                            const perms = userPermissions[u.id] || { create: false, read: false, update: false, delete: false };
+                            return (
+                              <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-gray-900">{u.name}</div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
+                                    <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.update} onChange={() => toggleUserPermission(u.id, 'update')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.delete} onChange={() => toggleUserPermission(u.id, 'delete')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 bg-white p-4 flex gap-3 justify-end items-center">
+                  <button
+                    onClick={resetShareModal}
+                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleShareSubmit}
+                    disabled={shareLoading}
+                    className="flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    Simpan Perubahan
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal
         open={showDeleteConfirm}
         title="Hapus File"
@@ -386,6 +804,27 @@ export function FileList({ folderId }: FileListProps) {
         }}
         onConfirm={confirmDelete}
       />
+
+      {/* Success Modal */}
+      {successMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              {successMessage}
+            </p>
+            <button
+              onClick={() => { setSuccessMessage(null); setFileToShare(null); }}
+              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all"
+            >
+              Tutup Jendela
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -147,13 +147,20 @@ class ApiClient {
 
   async createUser(userData: {
     email: string;
-    password: string;
+    password?: string;
     name: string;
     role_id?: string;
   }): Promise<User> {
     return this.request<User>('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
+    });
+  }
+
+  async importUsers(usersData: any[]): Promise<{ success: number; failed: number; errors: any[] }> {
+    return this.request<{ success: number; failed: number; errors: any[] }>('/users/import-excel', {
+      method: 'POST',
+      body: JSON.stringify(usersData)
     });
   }
 
@@ -207,6 +214,7 @@ class ApiClient {
     name: string;
     parent_id?: string | null;
     share_with_roles?: string[];
+    user_permissions?: any[];
   }): Promise<Folder> {
     return this.request<Folder>('/folders', {
       method: 'POST',
@@ -216,7 +224,7 @@ class ApiClient {
 
   async updateFolder(
     id: string,
-    data: { name?: string }
+    data: { name?: string; share_with_roles?: string[]; user_permissions?: any[] }
   ): Promise<Folder> {
     return this.request<Folder>(`/folders/${id}`, {
       method: 'PATCH',
@@ -302,6 +310,23 @@ class ApiClient {
 
   async getFile(id: string): Promise<FileEntity> {
     return this.request<FileEntity>(`/files/${id}`);
+  }
+
+  async renameFile(id: string, name: string): Promise<FileEntity> {
+    return this.request<FileEntity>(`/files/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name })
+    });
+  }
+
+  async shareFile(
+    id: string,
+    data: { share_with_roles?: string[]; user_permissions?: any[] }
+  ): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/access-requests/files/${id}/share`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async downloadFile(id: string): Promise<Blob> {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Shield, Folder, FileText, Clock, Users } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Shield, Folder, FileText, Clock, Users, Upload, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { useAuthContext } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 const UNIT_LABELS: Record<string, string> = {
   wd1: 'WD 1',
@@ -48,6 +49,65 @@ export function SuperAdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   // Filter dropdown: semua aktivitas, super admin saja, atau user saja
   const [activityFilter, setActivityFilter] = useState<'all' | 'superadmin' | 'user'>('all');
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      const toastId = toast.loading('Membaca file Excel...');
+      
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          if (!data) throw new Error('Gagal membaca file');
+          
+          // Dynamically import xlsx for client side
+          const XLSX = await import('xlsx');
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          
+          const rawData = XLSX.utils.sheet_to_json(sheet) as any[];
+          
+          if (rawData.length === 0) {
+             toast.error('File Excel kosong', { id: toastId });
+             return;
+          }
+
+          // Map the imported JSON to the expected standard keys: email, name, role
+          toast.loading(`Memproses ${rawData.length} baris data...`, { id: toastId });
+          const formattedData = rawData.map(row => ({
+            name: row.Nama || row.name || row.Name || 'Unknown',
+            email: row.Email || row.email || `${Math.random().toString(36).substring(7)}@upnvj.ac.id`,
+            role: row.Jabatan || row.Role || row.role || 'Tendik'
+          }));
+
+          const response = await apiClient.importUsers(formattedData);
+          toast.success(`Berhasil import ${response.success} user. Gagal: ${response.failed}`, { id: toastId });
+          
+          // If there were fails, maybe show a quick alert
+          if (response.failed > 0) {
+             console.log('Import errors:', response.errors);
+          }
+        } catch (err: any) {
+          toast.error(err.message || 'Error saat parse Excel', { id: toastId });
+        } finally {
+          setIsImporting(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+      
+      reader.readAsBinaryString(file);
+    } catch (err) {
+      toast.error('Terjadi kesalahan sistem');
+      setIsImporting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -100,7 +160,7 @@ export function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="rounded-2xl border border-gray-200 bg-linear-to-r from-orange-50 via-white to-orange-50 p-6 shadow-sm">
+      <div className="rounded-2xl border border-gray-200 bg-linear-to-r from-orange-50 via-white to-orange-50 p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-orange-500 to-orange-700 shadow-lg">
             <Shield className="h-7 w-7 text-white" />
@@ -111,6 +171,24 @@ export function SuperAdminDashboard() {
             </h1>
             <p className="text-sm text-gray-500">Sistem Repository Fakultas Ilmu Komputer</p>
           </div>
+        </div>
+
+        <div className="flex gap-3">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload}
+            accept=".xlsx, .xls, .csv" 
+            className="hidden" 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isImporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+            Import Data User (Excel)
+          </button>
         </div>
       </div>
 
