@@ -414,24 +414,6 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               </button>
               
               <button
-            onClick={() => {
-              router.push('/dashboard');
-              onFolderSelect(null);
-              setActiveMenu('recycle-bin');
-            }}
-            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-              activeMenu === 'recycle-bin'
-                ? 'bg-orange-100 text-orange-700 font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Trash2 className="h-5 w-5 text-orange-600" />
-            <span>Recycle Bin</span>
-          </button>
-
-              </button>
-
-              <button
                 onClick={() => {
                   router.push('/dashboard');
                   onFolderSelect(null);
@@ -766,7 +748,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       {/* Success Modal */}
       {successMessage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
               <Check className="h-8 w-8 text-green-600" />

@@ -321,7 +321,7 @@ class ApiClient {
 
   async shareFile(
     id: string,
-    data: { share_with_roles?: string[]; user_permissions?: any[] }
+    data: { share_with_roles?: string[]; user_permissions?: any[]; message?: string }
   ): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/access-requests/files/${id}/share`, {
       method: 'POST',
@@ -446,7 +446,7 @@ class ApiClient {
   }
 
   // Mengirimkan Permintaan Akses (Request Access)
-  async requestAccess(data: { folderId?: string; fileId?: string }): Promise<any> {
+  async requestAccess(data: { folderId?: string; fileId?: string; message?: string }): Promise<any> {
     return this.request('/access-requests', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -502,6 +502,7 @@ class ApiClient {
       can_create?: boolean;
       can_update?: boolean;
       can_delete?: boolean;
+      response_message?: string;
     }
   ): Promise<{ message: string }> {
     return this.request(`/access-requests/${id}/approve`, {
@@ -510,9 +511,10 @@ class ApiClient {
     });
   }
 
-  async rejectAccessRequest(id: number): Promise<any> {
+  async rejectAccessRequest(id: number, responseMessage?: string): Promise<any> {
     return this.request(`/access-requests/${id}/reject`, {
       method: 'PATCH',
+      body: JSON.stringify({ response_message: responseMessage }),
     });
   }
 
@@ -530,6 +532,7 @@ class ApiClient {
       resourceName: string;
       resourceType: 'folder' | 'file';
       status: string;
+      message: string | null;
       createdAt: string;
     }>;
     updates: Array<{
@@ -538,6 +541,7 @@ class ApiClient {
       resourceName: string;
       resourceType: 'folder' | 'file';
       status: string;
+      response_message: string | null;
       createdAt: string;
     }>;
   }> {

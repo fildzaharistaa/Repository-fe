@@ -59,6 +59,7 @@ export function FileList({ folderId }: FileListProps) {
   const [shareWithWD3, setShareWithWD3] = useState(false);
   const [shareWithDosen, setShareWithDosen] = useState(false);
   const [shareWithTendik, setShareWithTendik] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
 
   useEffect(() => {
     if (showShareModal) {
@@ -120,6 +121,7 @@ export function FileList({ folderId }: FileListProps) {
     setShareWithWD3(false);
     setShareWithDosen(false);
     setShareWithTendik(false);
+    setShareMessage('');
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,7 +199,8 @@ export function FileList({ folderId }: FileListProps) {
 
       await apiClient.shareFile(fileToShare.id, {
         share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
-        user_permissions: uPerms.length > 0 ? uPerms : undefined
+        user_permissions: uPerms.length > 0 ? uPerms : undefined,
+        message: shareMessage.trim() || undefined
       });
 
       setSuccessMessage(`File "${fileToShare.name}" berhasil dibagikan ke pengguna dan grup yang Anda pilih.`);
@@ -660,6 +663,34 @@ export function FileList({ folderId }: FileListProps) {
                     ))}
                   </div>
                 </div>
+
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Pesan (Opsional)</label>
+                  <p className="text-xs text-gray-500 mb-2">Tulis pesan untuk penerima file ini.</p>
+                  <textarea
+                    value={shareMessage}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) setShareMessage(e.target.value);
+                    }}
+                    placeholder="Contoh: Silakan review dokumen ini sebelum rapat besok..."
+                    rows={3}
+                    className={`w-full rounded-md border px-3 py-2 text-sm text-black focus:outline-hidden resize-none ${
+                      shareMessage.length >= 500
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                    }`}
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    {shareMessage.length >= 500 && (
+                      <p className="text-xs text-red-500 font-medium">Pesan sudah mencapai batas maksimal!</p>
+                    )}
+                    <p className={`text-xs ml-auto font-medium ${
+                      shareMessage.length >= 500 ? 'text-red-500' : shareMessage.length >= 450 ? 'text-amber-500' : 'text-gray-400'
+                    }`}>
+                      {shareMessage.length}/500
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Right Content - User Permission Table */}
@@ -807,7 +838,7 @@ export function FileList({ folderId }: FileListProps) {
 
       {/* Success Modal */}
       {successMessage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
               <Check className="h-8 w-8 text-green-600" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon } from 'lucide-react';
+import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon, MessageCircle } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 
@@ -12,6 +12,7 @@ type IncomingNotif = {
   resourceName: string;
   resourceType: 'folder' | 'file';
   status: string;
+  message: string | null;
   createdAt: string;
 };
 
@@ -21,6 +22,7 @@ type UpdateNotif = {
   resourceName: string;
   resourceType: 'folder' | 'file';
   status: string;
+  response_message: string | null;
   createdAt: string;
 };
 
@@ -41,6 +43,11 @@ export function NotificationBell() {
     can_delete: false,
     can_download: true,
   });
+  const [approveMessage, setApproveMessage] = useState('');
+
+  // Reject Modal state
+  const [showRejectModal, setShowRejectModal] = useState<number | null>(null);
+  const [rejectMessage, setRejectMessage] = useState('');
 
   // Fetch notifikasi dari backend
   const fetchNotifications = useCallback(async () => {
@@ -86,8 +93,9 @@ export function NotificationBell() {
     e.stopPropagation();
     if (notif.resourceType === 'folder') {
       // Buka modal untuk set permission
-      setOpen(false); // Tutup notif popup agar modal tidak tertutup otomatis oleh klik luar
+      setOpen(false);
       setShowPermissionModal(notif.id);
+      setApproveMessage('');
       setSelectedPermissions({
         can_read: true,
         can_create: false,
@@ -96,18 +104,31 @@ export function NotificationBell() {
         can_download: true,
       });
     } else {
-      // File request, just give read/download access
-      executeApprove(notif.id, { can_read: true, can_download: true });
+      // File request — also open permission modal for response message
+      setOpen(false);
+      setShowPermissionModal(notif.id);
+      setApproveMessage('');
+      setSelectedPermissions({
+        can_read: true,
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        can_download: true,
+      });
     }
   };
 
   const executeApprove = async (id: number, permissions: any) => {
     setActionLoading(id);
     try {
-      await apiClient.approveAccessRequest(id, permissions);
+      await apiClient.approveAccessRequest(id, {
+        ...permissions,
+        response_message: approveMessage.trim() || undefined,
+      });
       // Hapus dari list incoming
       setIncoming(prev => prev.filter(n => n.id !== id));
       setShowPermissionModal(null);
+      setApproveMessage('');
     } catch {
       // skip
     } finally {
@@ -115,13 +136,21 @@ export function NotificationBell() {
     }
   };
 
-  // Reject request
-  const handleReject = async (id: number, e: React.MouseEvent) => {
+  // Reject request — open reject modal
+  const handleRejectClick = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    setOpen(false);
+    setShowRejectModal(id);
+    setRejectMessage('');
+  };
+
+  const executeReject = async (id: number) => {
     setActionLoading(id);
     try {
-      await apiClient.rejectAccessRequest(id);
+      await apiClient.rejectAccessRequest(id, rejectMessage.trim() || undefined);
       setIncoming(prev => prev.filter(n => n.id !== id));
+      setShowRejectModal(null);
+      setRejectMessage('');
     } catch {
       // skip
     } finally {
@@ -201,6 +230,16 @@ export function NotificationBell() {
                           </p>
                           <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
 
+                          {/* Show requester's message if present */}
+                          {notif.message && (
+                            <div className="mt-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-2">
+                              <div className="flex items-start gap-1.5">
+                                <MessageCircle size={12} className="text-blue-500 mt-0.5 shrink-0" />
+                                <p className="text-xs text-blue-800 leading-relaxed italic">"{notif.message}"</p>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Tombol Approve / Reject */}
                           <div className="flex items-center gap-2 mt-2">
                             <button
@@ -212,7 +251,7 @@ export function NotificationBell() {
                               Approve
                             </button>
                             <button
-                              onClick={(e) => handleReject(notif.id, e)}
+                              onClick={(e) => handleRejectClick(notif.id, e)}
                               disabled={actionLoading === notif.id}
                               className="flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 hover:bg-red-100 transition-colors disabled:opacity-50"
                             >
@@ -258,6 +297,16 @@ export function NotificationBell() {
                             )}
                           </p>
                           <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
+
+                          {/* Show owner's response message if present */}
+                          {notif.response_message && (
+                            <div className="mt-2 rounded-md bg-gray-100 border border-gray-200 px-3 py-2">
+                              <div className="flex items-start gap-1.5">
+                                <MessageCircle size={12} className="text-gray-500 mt-0.5 shrink-0" />
+                                <p className="text-xs text-gray-700 leading-relaxed italic">"{notif.response_message}"</p>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -341,11 +390,39 @@ export function NotificationBell() {
                   </div>
                 </label>
               </div>
+
+              {/* Response message textarea */}
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <label className="mb-2 block text-sm font-semibold text-gray-700">Pesan untuk Peminta Akses (Opsional)</label>
+                <textarea
+                  value={approveMessage}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 500) setApproveMessage(e.target.value);
+                  }}
+                  placeholder="Contoh: Akses diberikan, silakan gunakan dengan bijak..."
+                  rows={3}
+                  className={`w-full rounded-md border px-3 py-2 text-sm text-black focus:outline-hidden resize-none ${
+                    approveMessage.length >= 500
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:border-orange-500 focus:ring-orange-500'
+                  }`}
+                />
+                <div className="flex justify-between items-center mt-1">
+                  {approveMessage.length >= 500 && (
+                    <p className="text-xs text-red-500 font-medium">Pesan sudah mencapai batas maksimal!</p>
+                  )}
+                  <p className={`text-xs ml-auto font-medium ${
+                    approveMessage.length >= 500 ? 'text-red-500' : approveMessage.length >= 450 ? 'text-amber-500' : 'text-gray-400'
+                  }`}>
+                    {approveMessage.length}/500
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
               <button
-                onClick={() => setShowPermissionModal(null)}
+                onClick={() => { setShowPermissionModal(null); setApproveMessage(''); }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
               >
                 Cancel
@@ -356,6 +433,77 @@ export function NotificationBell() {
               >
                 {actionLoading === showPermissionModal ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 Confirm Approval
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Confirmation Modal */}
+      {showRejectModal !== null && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl overflow-hidden text-left" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 bg-red-50 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <X className="h-5 w-5 text-red-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Tolak Request</h3>
+              </div>
+              <button
+                onClick={() => { setShowRejectModal(null); setRejectMessage(''); }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm text-gray-700 mb-4">
+                Apakah Anda yakin ingin menolak request ini? Anda dapat menyertakan pesan alasan penolakan.
+              </p>
+
+              <div className="mb-4">
+                <label className="mb-2 block text-sm font-semibold text-gray-700">Pesan Penolakan (Opsional)</label>
+                <textarea
+                  value={rejectMessage}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 500) setRejectMessage(e.target.value);
+                  }}
+                  placeholder="Contoh: Maaf, request ditolak karena..."
+                  rows={4}
+                  className={`w-full rounded-md border px-3 py-2 text-sm text-black focus:outline-hidden resize-none ${
+                    rejectMessage.length >= 500
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:border-red-500 focus:ring-red-500'
+                  }`}
+                  autoFocus
+                />
+                <div className="flex justify-between items-center mt-1">
+                  {rejectMessage.length >= 500 && (
+                    <p className="text-xs text-red-500 font-medium">Pesan sudah mencapai batas maksimal!</p>
+                  )}
+                  <p className={`text-xs ml-auto font-medium ${
+                    rejectMessage.length >= 500 ? 'text-red-500' : rejectMessage.length >= 450 ? 'text-amber-500' : 'text-gray-400'
+                  }`}>
+                    {rejectMessage.length}/500
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => { setShowRejectModal(null); setRejectMessage(''); }}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => executeReject(showRejectModal)}
+                disabled={actionLoading === showRejectModal}
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-sm disabled:opacity-50"
+              >
+                {actionLoading === showRejectModal ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                Tolak Request
               </button>
             </div>
           </div>
