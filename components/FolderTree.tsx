@@ -255,21 +255,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             <LayoutDashboard className="h-5 w-5 text-orange-600" />
             <span>Dashboard</span>
           </button>
-          <button
-            onClick={() => {
-              router.push('/dashboard');
-              onFolderSelect(null);
-              setActiveMenu('recycle-bin');
-            }}
-            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-              activeMenu === 'recycle-bin'
-                ? 'bg-orange-100 text-orange-700 font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <Trash2 className="h-5 w-5 text-orange-600" />
-            <span>Recycle Bin</span>
-          </button>
+          
           {!isAdmin && (
             <>
               <button
@@ -302,7 +288,23 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <Clock className="h-5 w-5 text-orange-600" />
                 <span>Recent Files</span>
               </button>
-              
+
+              <button
+                onClick={() => {
+                  router.push('/dashboard');
+                  onFolderSelect(null);
+                  setActiveMenu('recycle-bin');
+                }}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  activeMenu === 'recycle-bin'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Trash2 className="h-5 w-5 text-orange-600" />
+                <span>Recycle Bin</span>
+              </button>
+
               <div className="my-2 border-t border-gray-200"></div>
               <div className="px-2 py-1">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Shared With Me</p>
