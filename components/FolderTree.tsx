@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -38,6 +38,7 @@ interface FolderItemProps {
   onEdit: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   depth: number;
+  maxDepth: number;
 }
 
 function FolderItem({ 
@@ -47,7 +48,8 @@ function FolderItem({
   onCreateSubfolder,
   onEdit,
   onDelete,
-  depth
+  depth,
+  maxDepth
 }: FolderItemProps) {
   const [expanded, setExpanded] = useState(false);
   const hasChildren = folder.children && folder.children.length > 0;
@@ -88,13 +90,13 @@ function FolderItem({
               e.stopPropagation();
               onCreateSubfolder(folder.id);
             }}
-            disabled={depth >= 5}
+            disabled={depth >= maxDepth}
             className={`rounded px-2 py-1 text-xs ${
-              depth >= 5 
+              depth >= maxDepth 
                 ? 'text-gray-400 cursor-not-allowed' 
                 : 'text-blue-600 hover:bg-blue-50'
             }`}
-            title={depth >= 5 ? "Max 5 levels reached" : "Create subfolder"}
+            title={depth >= maxDepth ? `Max ${maxDepth} levels reached` : "Create subfolder"}
           >
             <Plus className="h-3 w-3" />
           </button>
@@ -132,6 +134,7 @@ function FolderItem({
               onEdit={onEdit}
               onDelete={onDelete}
               depth={depth + 1}
+              maxDepth={maxDepth}
             />
           ))}
         </div>
@@ -177,7 +180,26 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   // Default permissions for simplicity in demo
-  const [userPermissions, setUserPermissions] = useState<Record<string, {create:boolean, read:boolean, update:boolean, delete:boolean}>>({});
+  const [userPermissions, setUserPermissions] = useState<Record<string, {read:boolean, download:boolean}>>({});
+
+  // Dynamic max folder depth from settings
+  const [maxFolderDepth, setMaxFolderDepth] = useState(5);
+
+  // Hierarchy request states
+  const [showHierarchyModal, setShowHierarchyModal] = useState(false);
+  const [requestedDepth, setRequestedDepth] = useState(6);
+  const [hierarchyMessage, setHierarchyMessage] = useState('');
+
+  // Fetch user stats on mount to get correct maxFolderDepth
+  useEffect(() => {
+    apiClient.getUserStats()
+      .then(stats => {
+        if (stats && stats.maxFolderDepth) {
+          setMaxFolderDepth(stats.maxFolderDepth);
+        }
+      })
+      .catch(err => console.error('Failed to fetch user stats:', err));
+  }, []);
 
   // Fetch users when component mounts (or when modal opens)
   useState(() => {
@@ -211,11 +233,12 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         .map(([userId, perms]) => ({
           user_id: userId,
           can_read: perms.read,
-          can_create: perms.create,
-          can_update: perms.update,
-          can_delete: perms.delete,
+          can_create: false,
+          can_update: false,
+          can_delete: false,
+          can_download: perms.download
         }))
-        .filter(p => p.can_read || p.can_create || p.can_update || p.can_delete);
+        .filter(p => p.can_read || p.can_download);
 
       if (editFolderId) {
         await apiClient.updateFolder(editFolderId, {
@@ -317,9 +340,9 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
     return matchesRole && matchesSearch;
   });
 
-  const toggleUserPermission = (userId: string, perm: keyof {create:boolean, read:boolean, update:boolean, delete:boolean}) => {
+  const toggleUserPermission = (userId: string, perm: keyof {read:boolean, download:boolean}) => {
     setUserPermissions(prev => {
-      const current = prev[userId] || { create: false, read: false, update: false, delete: false };
+      const current = prev[userId] || { read: false, download: false };
       return {
         ...prev,
         [userId]: { ...current, [perm]: !current[perm] }
@@ -508,43 +531,61 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       {/* Folder Management Section - only for non-admin users */}
       {!isAdmin && (
-      <div className="flex-1 overflow-y-auto">
-        {canCreateFolder && (
-        <div className="border-b border-gray-200 bg-linear-to-r from-gray-50 to-white p-4 space-y-2">
-          <button
-            onClick={() => setShowCreateDialog(true)}
-            className="w-full rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
-          >
-            + New Folder
-          </button>
-        </div>
-        )}
-        
-        <div className="p-2">
-        {folders.length === 0 ? (
-          <div className="p-4 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
-            <span className="block">No folders yet.</span>
-            <span className="block text-xs">Create one to get started, or request access to existing folders.</span>
+        <div className="flex-1 overflow-y-auto">
+          {canCreateFolder && (
+            <div className="border-b border-gray-200 bg-linear-to-r from-gray-50 to-white p-4 space-y-2">
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                className="w-full rounded-lg bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:from-orange-700 hover:to-orange-800 hover:shadow-lg transition-all"
+              >
+                <Plus className="mr-2 inline-block h-4 w-4" />
+                Create Folder
+              </button>
+            </div>
+          )}
+
+          <div className="p-4">
+            {folders.length === 0 ? (
+              <div className="py-8 text-center">
+                <FolderOpen className="mx-auto h-12 w-12 text-gray-300" />
+                <p className="mt-2 text-sm font-medium text-gray-500">No folders found</p>
+                <span className="block text-xs">Create one to get started, or request access to existing folders.</span>
+              </div>
+            ) : (
+              folders.map((folder) => (
+                <FolderItem 
+                  key={folder.id}
+                  folder={folder}
+                  selectedId={selectedFolderId}
+                  onSelect={(id) => {
+                    onFolderSelect(id);
+                    setActiveMenu(null);
+                  }}
+                  onCreateSubfolder={handleCreateSubfolder}
+                  onEdit={handleEditFolder}
+                  onDelete={handleDeleteFolder}
+                  depth={1}
+                  maxDepth={maxFolderDepth}
+                />
+              ))
+            )}
           </div>
-        ) : (
-          folders.map((folder) => (
-            <FolderItem 
-              key={folder.id}
-              folder={folder}
-              selectedId={selectedFolderId}
-              onSelect={(id) => {
-                onFolderSelect(id);
-                setActiveMenu(null);
-              }}
-              onCreateSubfolder={handleCreateSubfolder}
-              onEdit={handleEditFolder}
-              onDelete={handleDeleteFolder}
-              depth={1}
-            />
-          ))
-        )}
+
+          {/* Request Hierarchy Increase Button */}
+          {canCreateFolder && (
+            <div className="px-4 pb-3">
+              <button
+                onClick={() => {
+                  setRequestedDepth(maxFolderDepth + 1);
+                  setShowHierarchyModal(true);
+                }}
+                className="w-full rounded-lg border border-dashed border-orange-300 px-3 py-2 text-xs font-medium text-orange-600 hover:bg-orange-50 transition-all"
+              >
+                📂 Request Tambah Kedalaman Folder (Saat ini: {maxFolderDepth} level)
+              </button>
+            </div>
+          )}
         </div>
-      </div>
       )}
 
       {showCreateDialog && (
@@ -666,10 +707,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
                           <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Create</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">View</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Edit</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">Delete</th>
+                          <th className="px-2 py-3 font-semibold text-center w-24">View</th>
+                          <th className="px-2 py-3 font-semibold text-center w-24">Download</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -682,7 +721,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                         ) : (
                           filteredUsers.map((u) => {
                             const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-                            const perms = userPermissions[u.id] || { create: false, read: false, update: false, delete: false };
+                            const perms = userPermissions[u.id] || { read: false, download: false };
                             return (
                               <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3">
@@ -693,16 +732,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                                   </div>
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
-                                </td>
-                                <td className="px-2 py-3 text-center">
                                   <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.update} onChange={() => toggleUserPermission(u.id, 'update')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
-                                </td>
-                                <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.delete} onChange={() => toggleUserPermission(u.id, 'delete')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.download} onChange={() => toggleUserPermission(u.id, 'download')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                               </tr>
                             );
@@ -763,6 +796,79 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             >
               Tutup Jendela
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Hierarchy Request Modal */}
+      {showHierarchyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl overflow-hidden">
+            <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-gray-900">Request Tambah Kedalaman Folder</h3>
+              <button 
+                onClick={() => setShowHierarchyModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Kedalaman saat ini</label>
+                <div className="text-2xl font-bold text-orange-600">{maxFolderDepth} level</div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Kedalaman yang diminta</label>
+                <input
+                  type="number"
+                  min={maxFolderDepth + 1}
+                  value={requestedDepth}
+                  onChange={(e) => setRequestedDepth(parseInt(e.target.value, 10))}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-black focus:border-orange-500 focus:ring-orange-500 focus:outline-hidden"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Pesan (opsional)</label>
+                <textarea
+                  value={hierarchyMessage}
+                  onChange={(e) => setHierarchyMessage(e.target.value)}
+                  placeholder="Alasan request tambah kedalaman folder..."
+                  rows={3}
+                  maxLength={500}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-black focus:border-orange-500 focus:ring-orange-500 focus:outline-hidden resize-none"
+                />
+                <div className="text-right text-xs text-gray-400 mt-1">{hierarchyMessage.length}/500</div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowHierarchyModal(false)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await apiClient.requestHierarchyIncrease({
+                      requested_depth: requestedDepth,
+                      message: hierarchyMessage || undefined,
+                    });
+                    setShowHierarchyModal(false);
+                    setHierarchyMessage('');
+                    setSuccessMessage(`Request tambah kedalaman folder ke ${requestedDepth} level telah dikirim ke Super Admin.`);
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Gagal mengirim request');
+                  }
+                }}
+                disabled={requestedDepth <= maxFolderDepth}
+                className="flex items-center gap-2 rounded-md bg-orange-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Check className="h-4 w-4" />
+                Kirim Request
+              </button>
+            </div>
           </div>
         </div>
       )}

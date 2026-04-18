@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Shield, Folder, FileText, Clock, Users, Upload, Loader2 } from 'lucide-react';
+import { Shield, Folder, FileText, Clock, Users, Upload, Loader2, Settings, Layers, Check, X } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { useAuthContext } from '@/context/AuthContext';
+import { Role } from '@/types';
 import toast from 'react-hot-toast';
 
 const UNIT_LABELS: Record<string, string> = {
@@ -29,6 +30,8 @@ interface Stats {
   totalFolders: number;
   totalFiles: number;
   totalSize: number;
+  maxFolderDepth: number;
+  maxStoragePerUser: number;
   foldersPerUnit: Array<{ unit: string; count: string }>;
   usersPerRole: Array<{ roleName: string; count: string }>;
   recentActivity: Array<{ timestamp: string; user: string; action: string; type: 'superadmin' | 'user' }>;
@@ -51,6 +54,17 @@ export function SuperAdminDashboard() {
   const [activityFilter, setActivityFilter] = useState<'all' | 'superadmin' | 'user'>('all');
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Settings states
+  const [maxDepthInput, setMaxDepthInput] = useState(5);
+  const [savingDepth, setSavingDepth] = useState(false);
+  const [hierarchyRequests, setHierarchyRequests] = useState<any[]>([]);
+  
+  // Roles Depth Settings states
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [roleDepthInput, setRoleDepthInput] = useState(5);
+  const [savingRoleDepth, setSavingRoleDepth] = useState(false);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -123,6 +137,43 @@ export function SuperAdminDashboard() {
     };
     fetchStats();
   }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const data = await apiClient.getRoles();
+      // Filter out Dosen and Tendik since they shouldn't have custom depths
+      const filteredRoles = data.filter(r => 
+        !r.name.toLowerCase().includes('dosen') && 
+        !r.name.toLowerCase().includes('tendik') &&
+        !r.name.toLowerCase().includes('admin') &&
+        !r.name.toLowerCase().includes('superadmin')
+      );
+      setRoles(filteredRoles);
+    } catch (err) {
+      console.error('Failed to fetch roles:', err);
+    }
+  };
+
+  // Fetch hierarchy requests and roles
+  useEffect(() => {
+    const fetchHierarchyRequests = async () => {
+      try {
+        const data = await apiClient.getPendingHierarchyRequests();
+        setHierarchyRequests(data);
+      } catch (err) {
+        console.error('Failed to fetch hierarchy requests:', err);
+      }
+    };
+    fetchHierarchyRequests();
+    fetchRoles();
+  }, []);
+
+  // Set maxDepthInput when stats load
+  useEffect(() => {
+    if (stats?.maxFolderDepth) {
+      setMaxDepthInput(stats.maxFolderDepth);
+    }
+  }, [stats]);
 
   if (loading) {
     return (
@@ -231,10 +282,10 @@ export function SuperAdminDashboard() {
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Storage</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">{formatSize(stats.totalSize)}</p>
+              <p className="text-sm font-medium text-gray-500">Total Storage (Global)</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{formatSize(stats.totalSize)}</p>
             </div>
             <div className="rounded-full bg-orange-100 p-3">
               <div className="h-6 w-6 flex items-center justify-center">
@@ -242,6 +293,7 @@ export function SuperAdminDashboard() {
               </div>
             </div>
           </div>
+          <p className="text-xs text-gray-400 mb-1">Limit per user: {formatSize(stats.maxStoragePerUser || 104857600)}</p>
         </div>
       </div>
 
@@ -272,6 +324,190 @@ export function SuperAdminDashboard() {
           {stats.foldersPerUnit.length === 0 && (
             <div className="col-span-full py-4 text-center text-sm text-gray-500">
               Belum ada folder
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* System Settings Panel */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Max Folder Depth Setting */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <Layers className="h-5 w-5 text-orange-600" />
+            Pengaturan Kedalaman Folder
+          </h3>
+          <div className="space-y-6">
+            {/* Global Default Setting */}
+            <div>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Default Global (Semua User)</label>
+                  <input
+                    type="number"
+                    min={5}
+                    value={maxDepthInput}
+                    onChange={(e) => setMaxDepthInput(Math.max(5, parseInt(e.target.value, 10) || 5))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-orange-500 focus:ring-orange-500 focus:outline-hidden"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Batas minimum 5 level. Berlaku jika user/role tidak punya limit custom.</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      setSavingDepth(true);
+                      await apiClient.updateSetting('max_folder_depth', String(maxDepthInput));
+                      toast.success(`Max kedalaman folder default diperbarui ke ${maxDepthInput} level`);
+                      const data = await apiClient.getSuperAdminStats();
+                      setStats(data);
+                      await fetchRoles(); // Reset UI role list to show null values if reset in backend
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Gagal menyimpan pengaturan');
+                    } finally {
+                      setSavingDepth(false);
+                    }
+                  }}
+                  disabled={savingDepth}
+                  className="rounded-lg bg-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 disabled:opacity-50 transition-all"
+                >
+                  {savingDepth ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Per-Role Setting */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Limit Per Role (Kecuali Dosen & Tendik)</label>
+              {roles.length === 0 ? (
+                <p className="text-xs text-gray-500 italic">Memuat roles...</p>
+              ) : (
+                <div className="mb-3 space-y-2 max-h-32 overflow-y-auto pr-2 rounded-md border border-gray-100 p-2 bg-gray-50">
+                  {roles.map(role => (
+                    <label key={role.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                      <input 
+                        type="checkbox"
+                        className="rounded border-gray-300 text-orange-600 focus:ring-orange-500 h-4 w-4"
+                        checked={selectedRoles.includes(role.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedRoles([...selectedRoles, role.id]);
+                          else setSelectedRoles(selectedRoles.filter(id => id !== role.id));
+                        }}
+                      />
+                      <span className="font-medium capitalize">{role.name}</span>
+                      {role.max_folder_depth != null && (
+                        <span className="ml-auto text-xs font-semibold px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                          {role.max_folder_depth} level
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    min={5}
+                    value={roleDepthInput}
+                    onChange={(e) => setRoleDepthInput(Math.max(5, parseInt(e.target.value, 10) || 5))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-orange-500 focus:ring-orange-500 focus:outline-hidden"
+                    placeholder="Limit Role..."
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (selectedRoles.length === 0) {
+                      toast.error('Pilih setidaknya satu role');
+                      return;
+                    }
+                    try {
+                      setSavingRoleDepth(true);
+                      await apiClient.updateRoleDepth(selectedRoles, roleDepthInput);
+                      toast.success(`Berhasil update limit kedalaman untuk ${selectedRoles.length} role`);
+                      // Refresh roles manually or recall fetchRoles logic if abstracted, here we just update state
+                      setRoles(roles.map(r => selectedRoles.includes(r.id) ? { ...r, max_folder_depth: roleDepthInput } : r));
+                      setSelectedRoles([]);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Gagal update role');
+                    } finally {
+                      setSavingRoleDepth(false);
+                    }
+                  }}
+                  disabled={savingRoleDepth || selectedRoles.length === 0}
+                  className="rounded-lg bg-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 disabled:opacity-50 transition-all"
+                >
+                  {savingRoleDepth ? 'Memproses...' : 'Terapkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pending Hierarchy Requests */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <Settings className="h-5 w-5 text-orange-600" />
+            Request Tambah Kedalaman
+            {hierarchyRequests.length > 0 && (
+              <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                {hierarchyRequests.length}
+              </span>
+            )}
+          </h3>
+          {hierarchyRequests.length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">Tidak ada request pending</p>
+          ) : (
+            <div className="space-y-3 max-h-48 overflow-y-auto">
+              {hierarchyRequests.map((req) => (
+                <div key={req.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 bg-gray-50">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {req.requester?.name || req.requester?.email || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Request ke <span className="font-bold text-orange-600">{req.requested_depth} level</span>
+                      {req.message && ` — "${req.message}"`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await apiClient.approveHierarchyRequest(req.id);
+                          toast.success('Hierarchy request approved!');
+                          setHierarchyRequests(prev => prev.filter(r => r.id !== req.id));
+                          // Refresh stats
+                          const data = await apiClient.getSuperAdminStats();
+                          setStats(data);
+                          setMaxDepthInput(data.maxFolderDepth);
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : 'Gagal approve');
+                        }
+                      }}
+                      className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700"
+                    >
+                      <Check className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await apiClient.rejectAccessRequest(req.id);
+                          toast.success('Hierarchy request ditolak');
+                          setHierarchyRequests(prev => prev.filter(r => r.id !== req.id));
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : 'Gagal reject');
+                        }
+                      }}
+                      className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

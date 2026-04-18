@@ -459,6 +459,8 @@ class ApiClient {
     totalFolders: number;
     totalFiles: number;
     totalSize: number;
+    maxFolderDepth: number;
+    maxStoragePerUser: number;
     foldersPerUnit: Array<{ unit: string; count: string }>;
     usersPerRole: Array<{ roleName: string; count: string }>;
     recentActivity: Array<{ timestamp: string; user: string; action: string; type: 'superadmin' | 'user' }>;
@@ -471,6 +473,8 @@ class ApiClient {
     totalFolders: number;
     totalFiles: number;
     totalSize: number;
+    maxStoragePerUser: number;
+    maxFolderDepth: number;
     recentFiles: Array<{
       id: string;
       name: string;
@@ -570,6 +574,45 @@ class ApiClient {
 
   async permanentDeleteFolder(id: string): Promise<{ message: string }> {
     return this.request(`/recycle-bin/folder/${id}`, { method: 'DELETE' });
+  }
+
+  // ========== System Settings ==========
+  async getSettings(): Promise<Record<string, string>> {
+    return this.request('/settings');
+  }
+
+  async updateSetting(key: string, value: string): Promise<any> {
+    return this.request(`/settings/${key}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ value }),
+    });
+  }
+
+  // ========== Hierarchy Requests ==========
+  async requestHierarchyIncrease(data: { requested_depth: number; message?: string }): Promise<any> {
+    return this.request('/access-requests/hierarchy', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async approveHierarchyRequest(id: number, responseMessage?: string): Promise<any> {
+    return this.request(`/access-requests/${id}/approve-hierarchy`, {
+      method: 'PATCH',
+      body: JSON.stringify({ response_message: responseMessage }),
+    });
+  }
+
+  async getPendingHierarchyRequests(): Promise<any[]> {
+    return this.request('/access-requests/hierarchy/pending');
+  }
+
+  // ========== Roles ==========
+  async updateRoleDepth(roleIds: string[], maxDepth: number): Promise<any> {
+    return this.request('/roles/depth', {
+      method: 'PATCH',
+      body: JSON.stringify({ roleIds, maxDepth }),
+    });
   }
 }
 

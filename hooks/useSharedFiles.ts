@@ -42,11 +42,21 @@ export function useSharedFiles() {
     }
   }, []);
 
+  const deleteFile = useCallback(async (id: string) => {
+    try {
+      await apiClient.deleteFile(id);
+      await fetchFiles();
+    } catch (err) {
+      throw err;
+    }
+  }, [fetchFiles]);
+
   return {
     files,
     loading,
     error,
     fetchFiles,
     downloadFile,
+    deleteFile,
   };
 }

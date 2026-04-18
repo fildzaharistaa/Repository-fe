@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, DragEvent } from 'react';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown } from 'lucide-react';
+import { useFolderContext } from '@/context/FolderContext';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
+import { useAuth } from '@/hooks/useAuth';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
@@ -21,15 +23,37 @@ export function FileList({ folderId }: FileListProps) {
   const [folderName, setFolderName] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
 
+  const { setSelectedFolderId } = useFolderContext();
+  const [subfolders, setSubfolders] = useState<any[]>([]);
+  const { user } = useAuth();
+  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
+
   useEffect(() => {
     if (folderId) {
       apiClient.getFolder(folderId)
-        .then(folder => setFolderName(folder.name))
-        .catch(err => console.error('Failed to fetch folder name', err));
+        .then(folder => {
+          setFolderName(folder.name);
+          const ownerId = folder.owner?.id || (folder as any).owner_id;
+          setIsOwnerOrAdmin(
+            user?.id === ownerId || 
+            user?.role?.name === 'admin' || 
+            user?.role?.name === 'super admin'
+          );
+          // Sort subfolders by name
+          const sortedSubfolders = (folder.children || []).sort((a: any, b: any) => a.name.localeCompare(b.name));
+          setSubfolders(sortedSubfolders);
+        })
+        .catch(err => {
+          console.error('Failed to fetch folder info', err);
+          setSubfolders([]);
+          setIsOwnerOrAdmin(false);
+        });
     } else {
       setFolderName(null);
+      setSubfolders([]);
+      setIsOwnerOrAdmin(true);
     }
-  }, [folderId]);
+  }, [folderId, user]);
   const [showQuickView, setShowQuickView] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -53,7 +77,7 @@ export function FileList({ folderId }: FileListProps) {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
-  const [userPermissions, setUserPermissions] = useState<Record<string, {create:boolean, read:boolean, update:boolean, delete:boolean}>>({});
+  const [userPermissions, setUserPermissions] = useState<Record<string, {read:boolean, download:boolean}>>({});
   const [shareWithWD1, setShareWithWD1] = useState(false);
   const [shareWithWD2, setShareWithWD2] = useState(false);
   const [shareWithWD3, setShareWithWD3] = useState(false);
@@ -100,9 +124,9 @@ export function FileList({ folderId }: FileListProps) {
     return matchesRole && matchesSearch;
   });
 
-  const toggleUserPermission = (userId: string, perm: keyof {create:boolean, read:boolean, update:boolean, delete:boolean}) => {
+  const toggleUserPermission = (userId: string, perm: keyof {read:boolean, download:boolean}) => {
     setUserPermissions(prev => {
-      const current = prev[userId] || { create: false, read: false, update: false, delete: false };
+      const current = prev[userId] || { read: false, download: false };
       return {
         ...prev,
         [userId]: { ...current, [perm]: !current[perm] }
@@ -191,11 +215,12 @@ export function FileList({ folderId }: FileListProps) {
         .map(([userId, perms]) => ({
           user_id: userId,
           can_read: perms.read,
-          can_create: perms.create,
-          can_update: perms.update,
-          can_delete: perms.delete,
+          can_create: false,
+          can_update: false,
+          can_delete: false,
+          can_download: perms.download
         }))
-        .filter(p => p.can_read || p.can_create || p.can_update || p.can_delete);
+        .filter(p => p.can_read || p.can_download);
 
       await apiClient.shareFile(fileToShare.id, {
         share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
@@ -309,7 +334,7 @@ export function FileList({ folderId }: FileListProps) {
               <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
               <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
             </div>
-            {folderId && (
+            {folderId && isOwnerOrAdmin && (
               <button
                 onClick={() => setShowUploadModal(true)}
                 className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
@@ -342,16 +367,53 @@ export function FileList({ folderId }: FileListProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {files.length === 0 ? (
+                {files.length === 0 && subfolders.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center">
                       <FileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                      <p className="text-sm font-medium text-gray-900">No files in this folder</p>
+                      <p className="text-sm font-medium text-gray-900">Folder is empty</p>
                       <p className="mt-1 text-sm text-gray-500">Upload files to get started</p>
                     </td>
                   </tr>
                 ) : (
-                  files.map((file) => {
+                  <>
+                  {subfolders.map((subfolder) => (
+                    <tr 
+                      key={`folder-${subfolder.id}`} 
+                      className="hover:bg-orange-50 transition-colors cursor-pointer group"
+                      onClick={() => setSelectedFolderId(subfolder.id)}
+                    >
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <div className="flex items-center">
+                          <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600 group-hover:bg-orange-200 transition-colors">
+                            <Folder className="h-4 w-4" fill="currentColor" fillOpacity={0.2} />
+                          </span>
+                          <div>
+                            <span className="text-sm font-semibold text-gray-900 block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">
+                              {subfolder.name}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800">
+                          Folder
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        -
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                        {formatDate(subfolder.created_at)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                        <div className="flex items-center justify-end">
+                          <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {files.map((file) => {
                     const fileInfo = getFileTypeInfo(file.mime_type);
                     return (
                     <tr key={file.id} className="hover:bg-gray-50 transition-colors">
@@ -391,22 +453,26 @@ export function FileList({ folderId }: FileListProps) {
                           <Eye className="h-3.5 w-3.5" />
                           View
                         </button>
-                        <button
-                          onClick={() => handleShareClick(file)}
-                          className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
-                          title="Share File"
-                        >
-                          <Share2 className="h-3.5 w-3.5" />
-                          Share
-                        </button>
-                        <button
-                          onClick={() => handleRenameClick(file)}
-                          className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
-                          title="Rename File"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          Rename
-                        </button>
+                        {isOwnerOrAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleShareClick(file)}
+                              className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
+                              title="Share File"
+                            >
+                              <Share2 className="h-3.5 w-3.5" />
+                              Share
+                            </button>
+                            <button
+                              onClick={() => handleRenameClick(file)}
+                              className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
+                              title="Rename File"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                              Rename
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => handleDownload(file)}
                           className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
@@ -415,19 +481,23 @@ export function FileList({ folderId }: FileListProps) {
                           <Download className="h-3.5 w-3.5" />
                           Download
                         </button>
-                        <button
-                          onClick={() => handleDelete(file)}
-                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </button>
+                        {isOwnerOrAdmin && (
+                          <button
+                            onClick={() => handleDelete(file)}
+                            className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                   );
-                })
+                  })
+                  }
+                  </>
                 )}
               </tbody>
             </table>
@@ -754,10 +824,8 @@ export function FileList({ folderId }: FileListProps) {
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
                           <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">CREATE</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">READ</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">EDIT</th>
-                          <th className="px-2 py-3 font-semibold text-center w-16">DELETE</th>
+                          <th className="px-2 py-3 font-semibold text-center w-24">VIEW</th>
+                          <th className="px-2 py-3 font-semibold text-center w-24">DOWNLOAD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -770,7 +838,7 @@ export function FileList({ folderId }: FileListProps) {
                         ) : (
                           filteredUsers.map((u) => {
                             const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-                            const perms = userPermissions[u.id] || { create: false, read: false, update: false, delete: false };
+                            const perms = userPermissions[u.id] || { read: false, download: false };
                             return (
                               <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3">
@@ -781,16 +849,10 @@ export function FileList({ folderId }: FileListProps) {
                                   </div>
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.create} onChange={() => toggleUserPermission(u.id, 'create')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
-                                </td>
-                                <td className="px-2 py-3 text-center">
                                   <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.update} onChange={() => toggleUserPermission(u.id, 'update')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
-                                </td>
-                                <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.delete} onChange={() => toggleUserPermission(u.id, 'delete')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
+                                  <input type="checkbox" checked={perms.download} onChange={() => toggleUserPermission(u.id, 'download')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                               </tr>
                             );

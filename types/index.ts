@@ -5,6 +5,7 @@ export interface User {
   name: string;
   role_id: string;
   role: Role;
+  max_folder_depth?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -13,6 +14,7 @@ export interface Role {
   id: string;
   name: 'admin' | 'super admin' | 'wd1' | 'wd2' | 'wd3' | 'dosen' | 'tendik';
   description: string;
+  max_folder_depth?: number | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -27,6 +29,8 @@ export interface Folder {
   deleted_at: string | null;
   parent?: Folder;
   children?: Folder[];
+  owner?: User;
+  owner_id?: string;
 }
 
 export interface FolderTreeNode extends Folder {
@@ -57,6 +61,7 @@ export interface FolderPermission {
   can_create: boolean;
   can_update: boolean;
   can_delete: boolean;
+  can_download?: boolean;
   expires_at: string | null;
   created_at: string;
   updated_at: string;

@@ -4,14 +4,19 @@ import { useState } from 'react';
 import { useSharedFiles } from '@/hooks/useSharedFiles';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
-import { Eye, Download, FileText, Loader2, X } from 'lucide-react';
+import { Eye, Download, FileText, Loader2, X, Trash2 } from 'lucide-react';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import type { File as FileEntity } from '@/types';
+import { ConfirmModal } from './ConfirmModal';
+import toast from 'react-hot-toast';
 
 export function SharedFilesView() {
-  const { files, loading, error, downloadFile } = useSharedFiles();
+  const { files, loading, error, downloadFile, deleteFile } = useSharedFiles();
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
   const [showQuickView, setShowQuickView] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<FileEntity | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
@@ -23,6 +28,26 @@ export function SharedFilesView() {
       await downloadFile(file.id, file.name);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to download file');
+    }
+  };
+
+  const handleDelete = (file: FileEntity) => {
+    setFileToDelete(file);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!fileToDelete) return;
+    try {
+      setDeleteLoading(true);
+      await deleteFile(fileToDelete.id);
+      toast.success(`Akses file "${fileToDelete.name}" berhasil dihapus.`);
+      setShowDeleteConfirm(false);
+      setFileToDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus file');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -106,12 +131,23 @@ export function SharedFilesView() {
                       >
                         <Eye className="h-3.5 w-3.5" /> View
                       </button>
-                      <button
-                        onClick={() => handleDownload(file)}
-                        className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
-                      >
-                        <Download className="h-3.5 w-3.5" /> Download
-                      </button>
+                      {(file as any).can_download !== false && (
+                        <button
+                          onClick={() => handleDownload(file)}
+                          className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
+                        >
+                          <Download className="h-3.5 w-3.5" /> Download
+                        </button>
+                      )}
+                      {(file as any).can_delete && (
+                        <button
+                          onClick={() => handleDelete(file)}
+                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -142,12 +178,14 @@ export function SharedFilesView() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDownload(selectedFile)}
-                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-all"
-                >
-                  <Download className="h-4 w-4" /> Download
-                </button>
+                {(selectedFile as any).can_download !== false && (
+                  <button
+                    onClick={() => handleDownload(selectedFile)}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-all"
+                  >
+                    <Download className="h-4 w-4" /> Download
+                  </button>
+                )}
                 <button
                   onClick={() => setShowQuickView(false)}
                   className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
@@ -162,6 +200,17 @@ export function SharedFilesView() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Hapus File"
+        description={`Apakah Anda yakin ingin menghapus "${fileToDelete?.name}"?`}
+        loading={deleteLoading}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setFileToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon, MessageCircle } from 'lucide-react';
+import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon, MessageCircle, Layers } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 
@@ -13,6 +13,8 @@ type IncomingNotif = {
   resourceType: 'folder' | 'file';
   status: string;
   message: string | null;
+  request_type?: 'access' | 'hierarchy';
+  requested_depth?: number | null;
   createdAt: string;
 };
 
@@ -28,11 +30,23 @@ type UpdateNotif = {
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [showExpandedBadge, setShowExpandedBadge] = useState(false);
   const [incoming, setIncoming] = useState<IncomingNotif[]>([]);
   const [updates, setUpdates] = useState<UpdateNotif[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [isFirstFetchDone, setIsFirstFetchDone] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Ref untuk deteksi notifikasi baru
+  const prevIncomingRef = useRef<IncomingNotif[]>([]);
+  const prevUpdatesRef = useRef<UpdateNotif[]>([]);
+  const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const openRef = useRef(open);
+  const hasAutoOpenedOnLoadRef = useRef(false);
+  
+  // Keep openRef updated
+  useEffect(() => { openRef.current = open; }, [open]);
 
   // Permission Modal state
   const [showPermissionModal, setShowPermissionModal] = useState<number | null>(null);
@@ -52,7 +66,6 @@ export function NotificationBell() {
   // Fetch notifikasi dari backend
   const fetchNotifications = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await apiClient.getNotifications();
       setIncoming(data.incoming || []);
       setUpdates(data.updates || []);
@@ -60,13 +73,14 @@ export function NotificationBell() {
       // Jika gagal, biarkan kosong
     } finally {
       setLoading(false);
+      setIsFirstFetchDone(true);
     }
   }, []);
 
-  // Fetch saat pertama kali mount & polling setiap 30 detik
+  // Fetch saat pertama kali mount & polling setiap 5 detik
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 5000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
@@ -87,6 +101,50 @@ export function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Effect untuk pop down notifikasi angka otomatis saat ada notifikasi baru atau pertama kali login
+  useEffect(() => {
+    if (!isFirstFetchDone) return;
+
+    // Saat pertama kali data ter-fetch setelah login/refresh
+    if (!hasAutoOpenedOnLoadRef.current) {
+      hasAutoOpenedOnLoadRef.current = true;
+      
+      prevIncomingRef.current = incoming;
+      prevUpdatesRef.current = updates;
+
+      // Jika ada notifikasi saat awal masuk, kita tampilkan secara pop-down selama 5 detik
+      if (incoming.length > 0) {
+        if (!openRef.current) {
+          setShowExpandedBadge(true);
+          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+          autoCloseTimerRef.current = setTimeout(() => {
+            setShowExpandedBadge(false);
+            autoCloseTimerRef.current = null;
+          }, 5000);
+        }
+      }
+      return;
+    }
+
+    // Deteksi apakah ada id baru di incoming/updates
+    const newIncoming = incoming.filter(curr => !prevIncomingRef.current.some(prev => prev.id === curr.id));
+    const newUpdates = updates.filter(curr => !prevUpdatesRef.current.some(prev => prev.id === curr.id));
+
+    prevIncomingRef.current = incoming;
+    prevUpdatesRef.current = updates;
+
+    if (newIncoming.length > 0) {
+      if (!openRef.current) {
+        setShowExpandedBadge(true);
+        if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = setTimeout(() => {
+          setShowExpandedBadge(false);
+          autoCloseTimerRef.current = null;
+        }, 5000);
+      }
+    }
+  }, [incoming, updates, isFirstFetchDone]);
 
   // Approve request
   const handleApproveClick = (notif: IncomingNotif, e: React.MouseEvent) => {
@@ -175,20 +233,22 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={containerRef}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open); setShowExpandedBadge(false); }}
         className="text-black relative rounded-full p-2 hover:bg-gray-100"
       >
         <Bell size={20} />
 
-        {badgeCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-            {badgeCount > 9 ? '9+' : badgeCount}
+        {(badgeCount > 0 || showExpandedBadge) && (
+          <span className={`absolute flex items-center justify-center bg-red-500 text-white font-medium shadow-sm transition-all duration-500 ease-in-out z-20 overflow-hidden ${showExpandedBadge ? 'top-10 -right-2 h-7 px-3 rounded-full text-xs' : '-right-1 -top-1 h-4 w-4 rounded-full text-[10px]'}`}>
+            <span className="whitespace-nowrap">
+              {showExpandedBadge ? `${badgeCount} Notifikasi Baru` : (badgeCount > 9 ? '9+' : badgeCount)}
+            </span>
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-lg border bg-white shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute right-0 mt-2 w-80 rounded-lg border bg-white shadow-lg z-50 max-h-96 overflow-y-auto transform transition-all duration-200 origin-top animate-in fade-in slide-in-from-top-4">
           <div className="text-black p-3 text-sm font-semibold border-b">
             Notifications
           </div>
@@ -214,51 +274,100 @@ export function NotificationBell() {
                     <div key={`in-${notif.id}`} className="p-3 border-b last:border-b-0 hover:bg-gray-50">
                       <div className="flex items-start gap-2">
                         <div className="mt-0.5 shrink-0">
-                          {notif.resourceType === 'folder' ? (
+                          {notif.request_type === 'hierarchy' ? (
+                            <Layers size={16} className="text-orange-500" />
+                          ) : notif.resourceType === 'folder' ? (
                             <FolderIcon size={16} className="text-yellow-500" />
                           ) : (
                             <FileIcon size={16} className="text-blue-500" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900">
-                            <span className="font-medium">{notif.requesterName}</span>  
-                            <br />
-                            {' '} Requested Access to {notif.resourceType}{' '}
-                            <br />
-                            <span className="font-medium">"{notif.resourceName}"</span>
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
-
-                          {/* Show requester's message if present */}
-                          {notif.message && (
-                            <div className="mt-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-2">
-                              <div className="flex items-start gap-1.5">
-                                <MessageCircle size={12} className="text-blue-500 mt-0.5 shrink-0" />
-                                <p className="text-xs text-blue-800 leading-relaxed italic">"{notif.message}"</p>
+                          {notif.request_type === 'hierarchy' ? (
+                            <>
+                              <p className="text-sm text-gray-900">
+                                <span className="font-medium">{notif.requesterName}</span>
+                                <br />
+                                Request tambah kedalaman folder ke{' '}
+                                <span className="font-bold text-orange-600">{notif.requested_depth} level</span>
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
+                              {notif.message && (
+                                <div className="mt-2 rounded-md bg-orange-50 border border-orange-100 px-3 py-2">
+                                  <div className="flex items-start gap-1.5">
+                                    <MessageCircle size={12} className="text-orange-500 mt-0.5 shrink-0" />
+                                    <p className="text-xs text-orange-800 leading-relaxed italic">"{notif.message}"</p>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setActionLoading(notif.id);
+                                    try {
+                                      await apiClient.approveHierarchyRequest(notif.id);
+                                      setIncoming(prev => prev.filter(n => n.id !== notif.id));
+                                    } catch { /* skip */ } finally {
+                                      setActionLoading(null);
+                                    }
+                                  }}
+                                  disabled={actionLoading === notif.id}
+                                  className="flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 hover:bg-green-100 transition-colors disabled:opacity-50"
+                                >
+                                  <Check size={12} />
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={(e) => handleRejectClick(notif.id, e)}
+                                  disabled={actionLoading === notif.id}
+                                  className="flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                >
+                                  <X size={12} />
+                                  Reject
+                                </button>
                               </div>
-                            </div>
-                          )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-gray-900">
+                                <span className="font-medium">{notif.requesterName}</span>  
+                                <br />
+                                {' '} Requested Access to {notif.resourceType}{' '}
+                                <br />
+                                <span className="font-medium">"{notif.resourceName}"</span>
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
 
-                          {/* Tombol Approve / Reject */}
-                          <div className="flex items-center gap-2 mt-2">
-                            <button
-                              onClick={(e) => handleApproveClick(notif, e)}
-                              disabled={actionLoading === notif.id}
-                              className="flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 hover:bg-green-100 transition-colors disabled:opacity-50"
-                            >
-                              <Check size={12} />
-                              Approve
-                            </button>
-                            <button
-                              onClick={(e) => handleRejectClick(notif.id, e)}
-                              disabled={actionLoading === notif.id}
-                              className="flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 hover:bg-red-100 transition-colors disabled:opacity-50"
-                            >
-                              <X size={12} />
-                              Reject
-                            </button>
-                          </div>
+                              {notif.message && (
+                                <div className="mt-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-2">
+                                  <div className="flex items-start gap-1.5">
+                                    <MessageCircle size={12} className="text-blue-500 mt-0.5 shrink-0" />
+                                    <p className="text-xs text-blue-800 leading-relaxed italic">"{notif.message}"</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={(e) => handleApproveClick(notif, e)}
+                                  disabled={actionLoading === notif.id}
+                                  className="flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 hover:bg-green-100 transition-colors disabled:opacity-50"
+                                >
+                                  <Check size={12} />
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={(e) => handleRejectClick(notif.id, e)}
+                                  disabled={actionLoading === notif.id}
+                                  className="flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                >
+                                  <X size={12} />
+                                  Reject
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -354,39 +463,13 @@ export function NotificationBell() {
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={selectedPermissions.can_create}
-                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_create: e.target.checked})}
+                    checked={selectedPermissions.can_download}
+                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_download: e.target.checked})}
                     className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
                   />
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">Upload & Create</p>
-                    <p className="text-gray-500">Dapat mengunggah file baru dan membuat folder.</p>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedPermissions.can_update}
-                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_update: e.target.checked})}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
-                  />
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900">Edit / Update</p>
-                    <p className="text-gray-500">Dapat mengubah nama file atau folder.</p>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedPermissions.can_delete}
-                    onChange={(e) => setSelectedPermissions({...selectedPermissions, can_delete: e.target.checked})}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-600"
-                  />
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900">Delete</p>
-                    <p className="text-gray-500">Dapat menghapus file atau folder dari dalam.</p>
+                    <p className="font-medium text-gray-900">Download</p>
+                    <p className="text-gray-500">Dapat mengunduh file.</p>
                   </div>
                 </label>
               </div>
