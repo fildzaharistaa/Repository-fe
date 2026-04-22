@@ -368,6 +368,34 @@ class ApiClient {
     });
   }
 
+  async previewFile(id: string): Promise<Blob> {
+    const token = this.getToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/files/${id}/preview`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Preview failed');
+      throw new Error(errorText || `Preview failed with status ${response.status}`);
+    }
+
+    return response.blob();
+  }
+
+  getPreviewUrl(id: string): string {
+    const token = this.getToken();
+    return `${API_BASE_URL}/files/${id}/preview?token=${token}`;
+  }
+
   // Pengaturan Hak Akses Folder (Permission - Khusus Admin)
   async getPermissions(folderId?: string): Promise<FolderPermission[]> {
     const query = folderId ? `?folderId=${folderId}` : '';
