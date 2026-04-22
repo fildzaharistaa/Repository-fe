@@ -28,6 +28,9 @@ export function FileList({ folderId }: FileListProps) {
   const { user } = useAuth();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
 
+  const isDosenOrTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
+  const hasEditRights = isOwnerOrAdmin || isDosenOrTendik;
+
   useEffect(() => {
     if (folderId) {
       apiClient.getFolder(folderId)
@@ -334,7 +337,7 @@ export function FileList({ folderId }: FileListProps) {
               <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
               <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
             </div>
-            {folderId && isOwnerOrAdmin && (
+            {folderId && hasEditRights && (
               <button
                 onClick={() => setShowUploadModal(true)}
                 className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
@@ -454,24 +457,24 @@ export function FileList({ folderId }: FileListProps) {
                           View
                         </button>
                         {isOwnerOrAdmin && (
-                          <>
-                            <button
-                              onClick={() => handleShareClick(file)}
-                              className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
-                              title="Share File"
-                            >
-                              <Share2 className="h-3.5 w-3.5" />
-                              Share
-                            </button>
-                            <button
-                              onClick={() => handleRenameClick(file)}
-                              className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
-                              title="Rename File"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                              Rename
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleShareClick(file)}
+                            className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
+                            title="Share File"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                            Share
+                          </button>
+                        )}
+                        {hasEditRights && (
+                          <button
+                            onClick={() => handleRenameClick(file)}
+                            className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
+                            title="Rename File"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                            Rename
+                          </button>
                         )}
                         <button
                           onClick={() => handleDownload(file)}
@@ -481,7 +484,7 @@ export function FileList({ folderId }: FileListProps) {
                           <Download className="h-3.5 w-3.5" />
                           Download
                         </button>
-                        {isOwnerOrAdmin && (
+                        {hasEditRights && (
                           <button
                             onClick={() => handleDelete(file)}
                             className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
