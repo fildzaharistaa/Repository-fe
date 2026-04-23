@@ -294,11 +294,21 @@ export function FileList({ folderId }: FileListProps) {
     if (!files || files.length === 0 || !folderId) return;
 
     try {
+      let hasError = false;
       for (let i = 0; i < files.length; i++) {
+        if (files[i].size > 5 * 1024 * 1024) {
+          toast.error(`File "${files[i].name}" melebihi batas maksimum 5MB.`);
+          hasError = true;
+          continue;
+        }
         await uploadFile(files[i]);
       }
+      if (!hasError) {
+        setSuccessMessage('File telah berhasil diunggah.');
+      } else if (files.length > 1) {
+        setSuccessMessage('Sebagian file berhasil diunggah (file > 5MB diabaikan).');
+      }
 
-      setSuccessMessage(`${files.length} File berhasil diupload.`);
       setShowUploadModal(false);
 
     } catch (err) {

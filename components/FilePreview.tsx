@@ -81,18 +81,7 @@ export function FilePreview({ file }: FilePreviewProps) {
           return;
         }
 
-        // 5. Text files
-        if (mimeType.startsWith('text/') || mimeType.includes('json') || mimeType.includes('javascript') || mimeType.includes('xml')) {
-          const blob = await apiClient.previewFile(file.id);
-          const text = await blob.text();
-          if (isMounted) {
-            setPreviewContent({ type: 'text', text });
-            setLoading(false);
-          }
-          return;
-        }
-
-        // 6. DOCX (Word)
+        // 4. DOCX (Word)
         if (mimeType.includes('wordprocessingml') || mimeType.includes('msword')) {
           try {
             const blob = await apiClient.previewFile(file.id);
@@ -111,7 +100,7 @@ export function FilePreview({ file }: FilePreviewProps) {
           return;
         }
 
-        // 7. XLSX (Excel)
+        // 5. XLSX (Excel)
         if (mimeType.includes('spreadsheetml') || mimeType.includes('excel')) {
           try {
             const blob = await apiClient.previewFile(file.id);
@@ -128,6 +117,24 @@ export function FilePreview({ file }: FilePreviewProps) {
           } catch (err) {
             console.error('XLSX conversion error:', err);
             setPreviewContent({ type: 'unsupported' });
+            setLoading(false);
+          }
+          return;
+        }
+
+        // 6. PPTX (PowerPoint)
+        if (mimeType.includes('presentationml') || mimeType.includes('powerpoint')) {
+          setPreviewContent({ type: 'unsupported' });
+          setLoading(false);
+          return;
+        }
+
+        // 7. Text files
+        if (mimeType.startsWith('text/') || mimeType.includes('json') || mimeType.includes('javascript') || mimeType.includes('xml')) {
+          const blob = await apiClient.previewFile(file.id);
+          const text = await blob.text();
+          if (isMounted) {
+            setPreviewContent({ type: 'text', text });
             setLoading(false);
           }
           return;
@@ -250,7 +257,7 @@ export function FilePreview({ file }: FilePreviewProps) {
               src={previewContent.url} 
               controls 
               className="max-h-[70vh] w-full"
-              autoPlay={false}
+              autoPlay={true}
             />
           </div>
         )}

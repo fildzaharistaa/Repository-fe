@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon, MessageCircle, Layers } from 'lucide-react';
+import { Bell, Check, X, FolderIcon, FileIcon, Loader2, PersonStandingIcon, MessageCircle, Layers, Trash2, Info } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 
@@ -13,7 +13,7 @@ type IncomingNotif = {
   resourceType: 'folder' | 'file';
   status: string;
   message: string | null;
-  request_type?: 'access' | 'hierarchy';
+  request_type?: 'access' | 'hierarchy' | 'delete_confirmation' | 'system_notification';
   requested_depth?: number | null;
   createdAt: string;
 };
@@ -276,6 +276,8 @@ export function NotificationBell() {
                         <div className="mt-0.5 shrink-0">
                           {notif.request_type === 'hierarchy' ? (
                             <Layers size={16} className="text-orange-500" />
+                          ) : notif.request_type === 'delete_confirmation' ? (
+                            <Trash2 size={16} className="text-red-500" />
                           ) : notif.resourceType === 'folder' ? (
                             <FolderIcon size={16} className="text-yellow-500" />
                           ) : (
@@ -325,6 +327,46 @@ export function NotificationBell() {
                                 >
                                   <X size={12} />
                                   Reject
+                                </button>
+                              </div>
+                            </>
+                          ) : notif.request_type === 'delete_confirmation' ? (
+                            <>
+                              <p className="text-sm text-gray-900 font-semibold text-red-600">
+                                Konfirmasi Penghapusan
+                              </p>
+                              <p className="text-sm text-gray-900">
+                                <span className="font-medium">"{notif.resourceName}"</span>
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
+                              <div className="mt-2 rounded-md bg-red-50 border border-red-100 px-3 py-2">
+                                <p className="text-xs text-red-800 leading-relaxed italic">"{notif.message}"</p>
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setActionLoading(notif.id);
+                                    try {
+                                      await apiClient.approveAccessRequest(notif.id);
+                                      setIncoming(prev => prev.filter(n => n.id !== notif.id));
+                                    } catch { /* skip */ } finally {
+                                      setActionLoading(null);
+                                    }
+                                  }}
+                                  disabled={actionLoading === notif.id}
+                                  className="flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 hover:bg-green-100 transition-colors disabled:opacity-50"
+                                >
+                                  <Check size={12} />
+                                  Setuju
+                                </button>
+                                <button
+                                  onClick={(e) => handleRejectClick(notif.id, e)}
+                                  disabled={actionLoading === notif.id}
+                                  className="flex items-center gap-1 rounded-md bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                >
+                                  <X size={12} />
+                                  Tolak
                                 </button>
                               </div>
                             </>
