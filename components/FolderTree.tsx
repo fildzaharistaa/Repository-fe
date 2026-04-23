@@ -241,8 +241,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       if (editFolderId) {
         await apiClient.updateFolder(editFolderId, {
           name: newFolderName,
-          share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
-          user_permissions: uPerms.length > 0 ? uPerms : undefined
+          share_with_roles: shareRoles,
+          user_permissions: uPerms
         });
         setSuccessMessage(`Eksekusi pengaturan Folder "${newFolderName}" sukses diperbarui.`);
       } else {
@@ -277,10 +277,45 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
     setShowConfirm(true);
   };
 
-  const handleEditFolder = (id: string, name: string) => {
+  const handleEditFolder = async (id: string, name: string) => {
     setEditFolderId(id);
     setNewFolderName(name);
-    // You could fetch current folder permissions here to pre-check the boxes
+    
+    try {
+      const folder = await apiClient.getFolder(id);
+      
+      // Reset first
+      setShareWithWD1(false);
+      setShareWithWD2(false);
+      setShareWithWD3(false);
+      setShareWithDosen(false);
+      setShareWithTendik(false);
+      
+      const newPerms: Record<string, { read: boolean, download: boolean }> = {};
+
+      if (folder.permissions) {
+        folder.permissions.forEach(perm => {
+           if (perm.role) {
+             const rName = perm.role.name.toLowerCase();
+             if (rName.includes('wd1') || rName.includes('wd 1')) setShareWithWD1(true);
+             if (rName.includes('wd2') || rName.includes('wd 2')) setShareWithWD2(true);
+             if (rName.includes('wd3') || rName.includes('wd 3')) setShareWithWD3(true);
+             if (rName === 'dosen') setShareWithDosen(true);
+             if (rName === 'tendik') setShareWithTendik(true);
+           }
+           if (perm.user && perm.user_id !== folder.owner_id) {
+             newPerms[perm.user_id] = {
+               read: perm.can_read,
+               download: perm.can_download || false
+             };
+           }
+        });
+      }
+      setUserPermissions(newPerms);
+    } catch (err) {
+      console.error('Failed to fetch folder permissions', err);
+    }
+    
     setShowCreateDialog(true);
   };
 

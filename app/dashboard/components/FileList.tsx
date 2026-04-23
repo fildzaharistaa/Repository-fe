@@ -21,6 +21,7 @@ interface FileListProps {
 export function FileList({ folderId }: FileListProps) {
   const { files, loading, error, deleteFile, downloadFile, uploadFile, renameFile } = useFiles(folderId);
   const [folderName, setFolderName] = useState<string | null>(null);
+  const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
 
   const { setSelectedFolderId } = useFolderContext();
@@ -36,6 +37,7 @@ export function FileList({ folderId }: FileListProps) {
       apiClient.getFolder(folderId)
         .then(folder => {
           setFolderName(folder.name);
+          setParentFolderId(folder.parent_id);
           const ownerId = folder.owner?.id || (folder as any).owner_id;
           setIsOwnerOrAdmin(
             user?.id === ownerId || 
@@ -443,9 +445,20 @@ export function FileList({ folderId }: FileListProps) {
       <div className="h-full overflow-y-auto bg-white">
         <div className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
-              <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
+            <div className="flex items-center gap-3">
+              {folderId && (
+                <button
+                  onClick={() => setSelectedFolderId(parentFolderId)}
+                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                  title="Kembali ke folder sebelumnya"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              )}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
+                <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
+              </div>
             </div>
             {folderId && hasEditRights && (
               <button
