@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Folder, 
-  Clock, 
-  Users, 
-  Lock, 
+import {
+  LayoutDashboard,
+  Folder,
+  Clock,
+  Users,
+  Lock,
   Shield,
-  ChevronDown, 
+  ChevronDown,
   ChevronRight,
   Plus,
   X,
@@ -41,10 +41,10 @@ interface FolderItemProps {
   maxDepth: number;
 }
 
-function FolderItem({ 
-  folder, 
-  selectedId, 
-  onSelect, 
+function FolderItem({
+  folder,
+  selectedId,
+  onSelect,
   onCreateSubfolder,
   onEdit,
   onDelete,
@@ -57,9 +57,8 @@ function FolderItem({
   return (
     <div>
       <div
-        className={`flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-100 ${
-          selectedId === folder.id ? 'bg-blue-100' : ''
-        }`}
+        className={`flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-100 ${selectedId === folder.id ? 'bg-blue-100' : ''
+          }`}
       >
         <button
           onClick={() => {
@@ -91,11 +90,10 @@ function FolderItem({
               onCreateSubfolder(folder.id);
             }}
             disabled={depth >= maxDepth}
-            className={`rounded px-2 py-1 text-xs ${
-              depth >= maxDepth 
-                ? 'text-gray-400 cursor-not-allowed' 
-                : 'text-blue-600 hover:bg-blue-50'
-            }`}
+            className={`rounded px-2 py-1 text-xs ${depth >= maxDepth
+              ? 'text-gray-400 cursor-not-allowed'
+              : 'text-blue-600 hover:bg-blue-50'
+              }`}
             title={depth >= maxDepth ? `Max ${maxDepth} levels reached` : "Create subfolder"}
           >
             <Plus className="h-3 w-3" />
@@ -180,7 +178,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   // Default permissions for simplicity in demo
-  const [userPermissions, setUserPermissions] = useState<Record<string, {read:boolean, download:boolean}>>({});
+  const [userPermissions, setUserPermissions] = useState<Record<string, { read: boolean, download: boolean }>>({});
 
   // Dynamic max folder depth from settings
   const [maxFolderDepth, setMaxFolderDepth] = useState(5);
@@ -220,12 +218,12 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
-    
+
     try {
       const shareRoles: string[] = [];
       if (shareWithWD1) shareRoles.push('Wakil Dekan 1');
       if (shareWithWD2) shareRoles.push('Wakil Dekan 2');
-      if (shareWithWD3) shareRoles.push('Wakil Dekan 3'); 
+      if (shareWithWD3) shareRoles.push('Wakil Dekan 3');
       if (shareWithDosen) shareRoles.push('Dosen');
       if (shareWithTendik) shareRoles.push('Tendik');
 
@@ -268,6 +266,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
     setShareWithWD3(isWD3);
     setShareWithDosen(false);
     setShareWithTendik(false);
+    setUserPermissions({});
     setShowCreateDialog(false);
     setUserSearchTerm('');
     setSelectedRoleFilter(null);
@@ -335,12 +334,12 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const filteredUsers = users.filter(u => {
     const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
     const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
-    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
-                          (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
+    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
     return matchesRole && matchesSearch;
   });
 
-  const toggleUserPermission = (userId: string, perm: keyof {read:boolean, download:boolean}) => {
+  const toggleUserPermission = (userId: string, perm: keyof { read: boolean, download: boolean }) => {
     setUserPermissions(prev => {
       const current = prev[userId] || { read: false, download: false };
       return {
@@ -372,7 +371,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       <div className=" p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-          <Image src="/upnvj.png" alt="Campus Repository" width={40} height={40} />
+            <Image src="/upnvj.png" alt="Campus Repository" width={40} height={40} />
           </div>
           <div>
             <h2 className="text-sm font-bold text-orange-600 leading-tight">
@@ -393,11 +392,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               onFolderSelect(null);
               setActiveMenu('dashboard');
             }}
-            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-              activeMenu === 'dashboard' || (pathname === '/dashboard' && selectedFolderId === null && activeMenu === null)
-                ? 'bg-orange-100 text-orange-700 font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'dashboard' || (pathname === '/dashboard' && selectedFolderId === null && activeMenu === null)
+              ? 'bg-orange-100 text-orange-700 font-semibold'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <LayoutDashboard className="h-5 w-5 text-orange-600" />
             <span>Dashboard</span>
@@ -411,11 +409,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onFolderSelect(null);
                   setActiveMenu('all-folders');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  activeMenu === 'all-folders'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'all-folders'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Folder className="h-5 w-5 text-orange-600" />
                 <span>All Folders</span>
@@ -426,27 +423,25 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onFolderSelect(null);
                   setActiveMenu('recent-files');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  activeMenu === 'recent-files'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'recent-files'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Clock className="h-5 w-5 text-orange-600" />
                 <span>Recent Files</span>
               </button>
-              
+
               <button
                 onClick={() => {
                   router.push('/dashboard');
                   onFolderSelect(null);
                   setActiveMenu('recycle-bin');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  activeMenu === 'recycle-bin'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'recycle-bin'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Trash2 className="h-5 w-5 text-orange-600" />
                 <span>Recycle Bin</span>
@@ -462,11 +457,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onFolderSelect(null);
                   setActiveMenu('shared-folders');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  activeMenu === 'shared-folders'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'shared-folders'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Share2 className="h-5 w-5 text-orange-600" />
                 <span>Shared Folders</span>
@@ -477,11 +471,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onFolderSelect(null);
                   setActiveMenu('shared-files');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  activeMenu === 'shared-files'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'shared-files'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <FileText className="h-5 w-5 text-orange-600" />
                 <span>Shared Files</span>
@@ -500,11 +493,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onFolderSelect(null);
                   setActiveMenu(null);
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  pathname === '/users'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/users'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Users className="h-5 w-5 text-orange-600" />
                 <span>Users</span>
@@ -515,11 +507,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onFolderSelect(null);
                   setActiveMenu(null);
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  pathname === '/super-admin'
-                    ? 'bg-orange-100 text-orange-700 font-semibold'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/super-admin'
+                  ? 'bg-orange-100 text-orange-700 font-semibold'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Shield className="h-5 w-5 text-orange-600" />
                 <span>Role Management</span>
@@ -553,7 +544,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               </div>
             ) : (
               folders.map((folder) => (
-                <FolderItem 
+                <FolderItem
                   key={folder.id}
                   folder={folder}
                   selectedId={selectedFolderId}
@@ -596,7 +587,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               <h3 className="text-lg font-bold text-gray-900">
                 {editFolderId ? 'Edit Folder & Permission' : (parentId ? 'Create Subfolder' : 'Create Folder')}
               </h3>
-              <button 
+              <button
                 onClick={resetModal}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -622,7 +613,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <div className="mb-6">
                   <label className="mb-2 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
                   <p className="text-xs text-gray-500 mb-3">Pilih role untuk membagikan akses keseluruhan ke folder ini.</p>
-                  
+
                   <div className="space-y-2">
                     {[
                       { id: 'wd1', label: 'Wakil Dekan 1', checked: shareWithWD1, set: setShareWithWD1, disabled: isWD1 },
@@ -650,20 +641,20 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               <div className="w-full md:w-2/3 flex flex-col bg-gray-50">
                 <div className="p-4 border-b border-gray-200 bg-white">
                   <h4 className="text-sm font-semibold text-gray-800 mb-3">Spesifik User Permission (Optional)</h4>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Cari nama atau email..." 
+                      <input
+                        type="text"
+                        placeholder="Cari nama atau email..."
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 shadow-sm"
                       />
                     </div>
                     <div className="relative w-full sm:w-1/3">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowRoleDropdown(!showRoleDropdown)}
                         className="flex items-center justify-between w-full py-2 px-3 text-sm border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
@@ -673,7 +664,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                         </span>
                         <ChevronDown className="h-4 w-4 text-gray-400" />
                       </button>
-                      
+
                       {showRoleDropdown && (
                         <div className="absolute z-10 mt-1.5 w-full bg-white shadow-xl max-h-60 rounded-lg py-1 border border-gray-100 overflow-auto focus:outline-none">
                           <button
@@ -806,7 +797,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           <div className="w-full max-w-md rounded-xl bg-white shadow-2xl overflow-hidden">
             <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-900">Request Tambah Kedalaman Folder</h3>
-              <button 
+              <button
                 onClick={() => setShowHierarchyModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, DragEvent } from 'react';
+import { useState, useEffect, useRef, DragEvent, useMemo, Fragment } from 'react';
 import { useFolderContext } from '@/context/FolderContext';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
@@ -98,6 +98,34 @@ export function FileList({ folderId }: FileListProps) {
         .catch(err => console.error(err));
     }
   }, [showShareModal]);
+
+  const groupedFiles = useMemo(() => {
+    if (!isOwnerOrAdmin || isDosenOrTendik) return null;
+    
+    const groups: Record<string, { user: any, items: FileEntity[] }> = {};
+    files.forEach(file => {
+       const ownerData = (file as any).owner;
+       const ownerName = ownerData?.name || '';
+       const ownerEmail = ownerData?.email || '';
+       
+       let displayUser = "User Tidak Diketahui";
+       if (ownerName && ownerEmail) {
+           displayUser = `${ownerName} (${ownerEmail})`;
+       } else if (ownerName) {
+           displayUser = ownerName;
+       } else if (ownerEmail) {
+           displayUser = ownerEmail;
+       }
+       
+       const keyStr = displayUser;
+       
+       if (!groups[keyStr]) groups[keyStr] = { user: ownerData, items: [] };
+       groups[keyStr].items.push(file);
+    });
+    return groups;
+  }, [files, isOwnerOrAdmin, isDosenOrTendik]);
+
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
   const formatRoleName = (raw: string) => {
     if (!raw) return 'User';
@@ -245,7 +273,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setDeleteLoading(true);
       await deleteFile(fileToDelete.id);
-      setSuccessMessage(`File "${fileToDelete.name}" telah dupindahkan ke Recycle Bin.`);
+      setSuccessMessage(`File "${fileToDelete.name}" telah dipindahkan ke Recycle Bin.`);
       setShowDeleteConfirm(false);
       setFileToDelete(null);
     } catch (err) {
@@ -268,7 +296,7 @@ export function FileList({ folderId }: FileListProps) {
         await uploadFile(files[i]);
       }
 
-      setSuccessMessage(`${files.length} File berhasil diunggah.`);
+      setSuccessMessage(`${files.length} File berhasil diupload.`);
       setShowUploadModal(false);
 
     } catch (err) {
@@ -326,7 +354,89 @@ export function FileList({ folderId }: FileListProps) {
       </div>
     );
   }
-
+  const renderFileRow = (file: FileEntity, isGrouped: boolean = false) => {
+    const fileInfo = getFileTypeInfo(file.mime_type);
+    return (
+      <tr key={file.id} className="hover:bg-gray-50 transition-colors">
+        <td className="whitespace-nowrap px-6 py-4">
+          <div className={`flex items-center ${isGrouped ? 'ml-4 border-l-2 border-orange-200 pl-4' : ''}`}>
+            <span className="mr-3"><FileIcon mimeType={file.mime_type} /></span>
+            <div>
+              <button
+                onClick={() => handleQuickView(file)}
+                className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left"
+                title={file.name}
+              >
+                <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
+              </button>
+              <p className="text-xs text-gray-500">{fileInfo.label}</p>
+            </div>
+          </div>
+        </td>
+        <td className="whitespace-nowrap px-6 py-4">
+          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${fileInfo.badgeClass}`}>
+            {fileInfo.label}
+          </span>
+        </td>
+        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+          {formatFileSize(file.size)}
+        </td>
+        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+          {formatDate(file.created_at)}
+        </td>
+        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => handleQuickView(file)}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-all hover:shadow-sm"
+              title="Quick View"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              View
+            </button>
+            {isOwnerOrAdmin && (
+              <button
+                onClick={() => handleShareClick(file)}
+                className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
+                title="Share File"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
+            )}
+            {hasEditRights && (
+              <button
+                onClick={() => handleRenameClick(file)}
+                className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
+                title="Rename File"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+                Rename
+              </button>
+            )}
+            <button
+              onClick={() => handleDownload(file)}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-all hover:shadow-sm"
+              title="Download File"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </button>
+            {hasEditRights && (
+              <button
+                onClick={() => handleDelete(file)}
+                className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
+                title="Delete File"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <>
@@ -416,90 +526,52 @@ export function FileList({ folderId }: FileListProps) {
                       </td>
                     </tr>
                   ))}
-                  {files.map((file) => {
-                    const fileInfo = getFileTypeInfo(file.mime_type);
-                    return (
-                    <tr key={file.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div className="flex items-center">
-                        <span className="mr-3"><FileIcon mimeType={file.mime_type} /></span>
-                        <div>
-                          <button
-                            onClick={() => handleQuickView(file)}
-                            className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left"
-                            title={file.name}
+                  {groupedFiles ? (
+                     !activeGroup ? (
+                        Object.entries(groupedFiles).map(([groupName, groupData]) => (
+                          <tr 
+                            key={`group-${groupName}`}
+                            className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors" 
+                            onClick={() => setActiveGroup(groupName)}
                           >
-                            <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
-                          </button>
-                          <p className="text-xs text-gray-500">{fileInfo.label}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${fileInfo.badgeClass}`}>
-                        {fileInfo.label}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {formatFileSize(file.size)}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {formatDate(file.created_at)}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleQuickView(file)}
-                          className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-all hover:shadow-sm"
-                          title="Quick View"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          View
-                        </button>
-                        {isOwnerOrAdmin && (
-                          <button
-                            onClick={() => handleShareClick(file)}
-                            className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
-                            title="Share File"
-                          >
-                            <Share2 className="h-3.5 w-3.5" />
-                            Share
-                          </button>
-                        )}
-                        {hasEditRights && (
-                          <button
-                            onClick={() => handleRenameClick(file)}
-                            className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
-                            title="Rename File"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                            Rename
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDownload(file)}
-                          className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
-                          title="Download"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Download
-                        </button>
-                        {hasEditRights && (
-                          <button
-                            onClick={() => handleDelete(file)}
-                            className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                  })
-                  }
+                            <td colSpan={5} className="px-6 py-4">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-lg">
+                                  <Users className="h-6 w-6" />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-semibold text-gray-900 text-md">{groupName}</div>
+                                  <div className="text-sm text-gray-500 mt-0.5">{groupData.items.length} file(s)</div>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                     ) : (
+                        <>
+                          <tr className="bg-gray-50 border-b">
+                             <td colSpan={5} className="px-6 py-3">
+                                 <button onClick={() => setActiveGroup(null)} className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                                     <ArrowLeft className="w-4 h-4" />
+                                     Back to list
+                                 </button>
+                             </td>
+                          </tr>
+                          <tr className="bg-orange-50/50 border-b">
+                             <td colSpan={5} className="px-6 py-2">
+                                <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                   <Users className="w-4 h-4 text-orange-600" />
+                                   Files by: <span className="text-gray-900">{activeGroup}</span>
+                                </div>
+                             </td>
+                          </tr>
+                          {groupedFiles[activeGroup]?.items.map((file) => renderFileRow(file, false))}
+                        </>
+                     )
+                  ) : (
+                    files.map((file) => renderFileRow(file, false))
+                  )}
                   </>
                 )}
               </tbody>
