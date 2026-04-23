@@ -17,6 +17,13 @@ export function SharedFilesView() {
   const [fileToDelete, setFileToDelete] = useState<FileEntity | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+
+  const uniqueRoles = Array.from(new Set(files.map((f: any) => f.owner_role).filter(Boolean)));
+
+  const filteredFiles = files.filter((f: any) => 
+    roleFilter === 'all' || f.owner_role === roleFilter
+  );
 
   const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
@@ -69,9 +76,26 @@ export function SharedFilesView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Shared Files</h1>
-        <p className="text-sm text-gray-500 mt-1">Files that have been specifically shared with you</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Shared Files</h1>
+          <p className="text-sm text-gray-500 mt-1">Files that have been specifically shared with you</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="role-filter-files" className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter by Role:</label>
+          <select
+            id="role-filter-files"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all shadow-sm"
+          >
+            <option value="all">All Roles</option>
+            {uniqueRoles.map((role: any) => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm bg-white">
@@ -80,22 +104,29 @@ export function SharedFilesView() {
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Name</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Owner</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Role</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Size</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Shared On</th>
               <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {files.length === 0 ? (
+            {filteredFiles.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center">
+                <td colSpan={6} className="px-6 py-12 text-center">
                   <FileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                  <p className="text-sm font-medium text-gray-900">No shared files</p>
-                  <p className="mt-1 text-sm text-gray-500">Files shared directly with you will appear here</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {roleFilter === 'all' ? 'No shared files' : `No shared files from ${roleFilter}`}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {roleFilter === 'all' 
+                      ? 'Files shared directly with you will appear here'
+                      : `No one with the role "${roleFilter}" has shared any files with you.`}
+                  </p>
                 </td>
               </tr>
             ) : (
-              files.map((file) => {
+              filteredFiles.map((file) => {
                 const fileInfo = getFileTypeInfo(file.mime_type);
                 return (
                 <tr key={file.id} className="hover:bg-gray-50 transition-colors">
@@ -115,7 +146,12 @@ export function SharedFilesView() {
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    {(file as any).owner_name}
+                    {file.owner_name}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                      {file.owner_role}
+                    </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {formatFileSize(file.size)}
@@ -131,7 +167,7 @@ export function SharedFilesView() {
                       >
                         <Eye className="h-3.5 w-3.5" /> View
                       </button>
-                      {(file as any).can_download !== false && (
+                      {file.can_download !== false && (
                         <button
                           onClick={() => handleDownload(file)}
                           className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
@@ -139,7 +175,7 @@ export function SharedFilesView() {
                           <Download className="h-3.5 w-3.5" /> Download
                         </button>
                       )}
-                      {(file as any).can_delete && (
+                      {file.can_delete && (
                         <button
                           onClick={() => handleDelete(file)}
                           className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
@@ -173,12 +209,12 @@ export function SharedFilesView() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 truncate max-w-md">{selectedFile.name}</h3>
                   <p className="text-sm text-gray-500">
-                    {formatFileSize(selectedFile.size)} • Shared by {(selectedFile as any).owner_name}
+                    {formatFileSize(selectedFile.size)} • Shared by {selectedFile.owner_name}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {(selectedFile as any).can_download !== false && (
+                {selectedFile.can_download !== false && (
                   <button
                     onClick={() => handleDownload(selectedFile)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-all"

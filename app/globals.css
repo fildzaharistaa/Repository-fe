@@ -1,11 +1,10 @@
 @import "tailwindcss";
 
+
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -24,3 +23,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer utilities {
+  @keyframes bounce-short {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .animate-bounce-short {
+    animation: bounce-short 1s ease-in-out infinite;
+  }
+}
+

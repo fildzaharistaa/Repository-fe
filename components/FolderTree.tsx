@@ -149,9 +149,9 @@ interface FolderTreeProps {
 export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps) {
   const { user, isAdmin, canCreateFolder } = useAuthContext();
   const roleName = (typeof user?.role === 'object' ? user?.role?.name : user?.role)?.toLowerCase() || '';
-  const isWD1 = roleName === 'wd1';
-  const isWD2 = roleName === 'wd2';
-  const isWD3 = roleName === 'wd3';
+  const isWD1 = roleName === 'wd1' || roleName.includes('wakil dekan 1');
+  const isWD2 = roleName === 'wd2' || roleName.includes('wakil dekan 2');
+  const isWD3 = roleName === 'wd3' || roleName.includes('wakil dekan 3');
   const router = useRouter();
   const pathname = usePathname();
   const { activeMenu, setActiveMenu } = useFolderContext();
@@ -297,13 +297,13 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         folder.permissions.forEach(perm => {
            if (perm.role) {
              const rName = perm.role.name.toLowerCase();
-             if (rName.includes('wd1') || rName.includes('wd 1')) setShareWithWD1(true);
-             if (rName.includes('wd2') || rName.includes('wd 2')) setShareWithWD2(true);
-             if (rName.includes('wd3') || rName.includes('wd 3')) setShareWithWD3(true);
-             if (rName === 'dosen') setShareWithDosen(true);
-             if (rName === 'tendik') setShareWithTendik(true);
+             if (rName.includes('wd1') || rName.includes('wd 1') || rName.includes('wakil dekan 1')) setShareWithWD1(true);
+             if (rName.includes('wd2') || rName.includes('wd 2') || rName.includes('wakil dekan 2')) setShareWithWD2(true);
+             if (rName.includes('wd3') || rName.includes('wd 3') || rName.includes('wakil dekan 3')) setShareWithWD3(true);
+             if (rName.includes('dosen')) setShareWithDosen(true);
+             if (rName.includes('tendik')) setShareWithTendik(true);
            }
-           if (perm.user && perm.user_id !== folder.owner_id) {
+           if (perm.user && perm.user_id && perm.user_id !== folder.owner_id) {
              newPerms[perm.user_id] = {
                read: perm.can_read,
                download: perm.can_download || false

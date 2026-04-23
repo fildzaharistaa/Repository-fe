@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useFolderContext } from '@/context/FolderContext';
 import { Folder, Loader2 } from 'lucide-react';
@@ -8,6 +9,13 @@ import { formatDate } from '@/lib/utils/formatters';
 export function SharedFoldersView() {
   const { folders, loading, error } = useSharedFolders();
   const { setSelectedFolderId } = useFolderContext();
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+
+  const uniqueRoles = Array.from(new Set(folders.map((f: any) => f.owner_role).filter(Boolean)));
+
+  const filteredFolders = folders.filter((f: any) => 
+    roleFilter === 'all' || f.owner_role === roleFilter
+  );
 
   if (loading) {
     return (
@@ -27,22 +35,43 @@ export function SharedFoldersView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Shared Folders</h1>
-        <p className="text-sm text-gray-500 mt-1">Folders that have been shared with you by other users</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Shared Folders</h1>
+          <p className="text-sm text-gray-500 mt-1">Folders that have been shared with you by other users</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="role-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter by Role:</label>
+          <select
+            id="role-filter"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-sm"
+          >
+            <option value="all">All Roles</option>
+            {uniqueRoles.map((role: any) => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {folders.length === 0 ? (
+      {filteredFolders.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
           <Folder className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">No shared folders</h3>
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            {roleFilter === 'all' ? 'No shared folders' : `No shared folders from ${roleFilter}`}
+          </h3>
           <p className="mt-2 text-sm text-gray-500">
-            You don't have access to any folders shared by other users yet.
+            {roleFilter === 'all' 
+              ? "You don't have access to any folders shared by other users yet."
+              : `No one with the role "${roleFilter}" has shared any folders with you.`}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {folders.map((folder) => (
+          {filteredFolders.map((folder) => (
             <button
               key={folder.id}
               onClick={() => setSelectedFolderId(folder.id)}
@@ -58,7 +87,8 @@ export function SharedFoldersView() {
                   {folder.name}
                 </h3>
                 <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-                  <span className="truncate">Owner: {(folder as any).owner_name}</span>
+                  <span className="truncate">Owner: {folder.owner_name}</span>
+                  <span className="ml-2 rounded-md bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600">{folder.owner_role}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
                   <span>{formatDate(folder.created_at)}</span>

@@ -76,7 +76,13 @@ export function FileList({ folderId }: FileListProps) {
   const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+
+  // States for Request Access Modal
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [requestLoading, setRequestLoading] = useState(false);
 
   // States for Share Modal
   const [users, setUsers] = useState<any[]>([]);
@@ -294,25 +300,36 @@ export function FileList({ folderId }: FileListProps) {
     if (!files || files.length === 0 || !folderId) return;
 
     try {
-      let hasError = false;
+      let errorFiles: string[] = [];
+      let successCount = 0;
+
       for (let i = 0; i < files.length; i++) {
         if (files[i].size > 5 * 1024 * 1024) {
-          toast.error(`File "${files[i].name}" melebihi batas maksimum 5MB.`);
-          hasError = true;
+          errorFiles.push(files[i].name);
           continue;
         }
         await uploadFile(files[i]);
+        successCount++;
       }
-      if (!hasError) {
-        setSuccessMessage('File telah berhasil diunggah.');
-      } else if (files.length > 1) {
-        setSuccessMessage('Sebagian file berhasil diunggah (file > 5MB diabaikan).');
+
+      if (errorFiles.length > 0) {
+        const errorMsg = errorFiles.length === 1 
+          ? `File "${errorFiles[0]}" gagal diunggah karena melebihi batas maksimum 5MB.`
+          : `${errorFiles.length} file gagal diunggah karena melebihi batas maksimum 5MB.`;
+        
+        setErrorMessage(errorMsg);
+        
+        if (successCount > 0) {
+          setSuccessMessage(`${successCount} file lainnya berhasil diunggah.`);
+        }
+      } else {
+        setSuccessMessage('Semua file telah berhasil diunggah.');
       }
 
       setShowUploadModal(false);
 
     } catch (err) {
-      toast.error(handleApiError(err));
+      setErrorMessage(handleApiError(err));
     }
   };
 
@@ -331,41 +348,82 @@ export function FileList({ folderId }: FileListProps) {
     handleFileSelect(e.dataTransfer.files);
   };
 
+  const handleRequestAccess = async () => {
+    if (!folderId) return;
+    try {
+      setRequestLoading(true);
+      await apiClient.requestAccess({ folderId, message: requestMessage });
+      setSuccessMessage('Permintaan akses telah dikirim ke pemilik folder.');
+      setShowRequestModal(false);
+      setRequestMessage('');
+    } catch (err) {
+      setErrorMessage(handleApiError(err));
+    } finally {
+      setRequestLoading(false);
+    }
+  };
 
-  if (!folderId) {
-    return (
-      <div className="flex h-full items-center justify-center bg-black">
-        <div className="text-center">
-          <Folder className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-          <p className="text-xl font-semibold text-gray-700">Select a folder to view files</p>
-          <p className="mt-2 text-sm text-gray-500">Choose a folder from the sidebar to get started</p>
-        </div>
-      </div>
-    );
-  }
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-          <p className="text-gray-600">Loading files...</p>
+  const renderStateContent = () => {
+    if (!folderId) {
+      return (
+        <div className="flex h-full items-center justify-center bg-white">
+          <div className="text-center">
+            <Folder className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+            <p className="text-xl font-semibold text-gray-700">Select a folder to view files</p>
+            <p className="mt-2 text-sm text-gray-500">Choose a folder from the sidebar to get started</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center bg-white">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <AlertCircle className="mx-auto mb-2 h-8 w-8 text-red-600" />
-          <p className="font-semibold text-red-800">Error loading files</p>
-          <p className="mt-1 text-sm text-red-600">{error}</p>
+    if (loading) {
+      return (
+        <div className="flex h-full items-center justify-center bg-white">
+          <div className="text-center">
+            <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+            <p className="text-gray-600">Loading files...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
+
+    if (error) {
+      const isPermissionError = error.toLowerCase().includes('permission') || error.toLowerCase().includes('izin');
+      
+      return (
+        <div className="flex h-full items-center justify-center bg-white p-6">
+          <div className="w-full max-w-md rounded-2xl border border-red-100 bg-red-50 p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-red-800">Akses Ditolak</h3>
+            <p className="mt-2 text-sm text-red-600 mb-6 leading-relaxed">{error}</p>
+            
+            {isPermissionError && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowRequestModal(true)}
+                  className="w-full rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-red-700 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Minta Akses ke Folder Ini
+                </button>
+                <button
+                  onClick={() => setSelectedFolderId(parentFolderId)}
+                  className="w-full rounded-xl border border-red-200 bg-white px-6 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-all"
+                >
+                  Kembali
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const renderFileRow = (file: FileEntity, isGrouped: boolean = false) => {
     const fileInfo = getFileTypeInfo(file.mime_type);
     return (
@@ -453,8 +511,9 @@ export function FileList({ folderId }: FileListProps) {
   return (
     <>
       <div className="h-full overflow-y-auto bg-white">
-        <div className="p-6">
-          <div className="mb-4 flex items-center justify-between">
+        {renderStateContent() || (
+          <div className="p-6">
+            <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {folderId && (
                 <button
@@ -551,26 +610,63 @@ export function FileList({ folderId }: FileListProps) {
                   ))}
                   {groupedFiles ? (
                      !activeGroup ? (
-                        Object.entries(groupedFiles).map(([groupName, groupData]) => (
-                          <tr 
-                            key={`group-${groupName}`}
-                            className="bg-white border-b hover:bg-gray-50 cursor-pointer transition-colors" 
-                            onClick={() => setActiveGroup(groupName)}
-                          >
-                            <td colSpan={5} className="px-6 py-4">
-                              <div className="flex items-center gap-4">
-                                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-lg">
-                                  <Users className="h-6 w-6" />
+                        Object.entries(groupedFiles).map(([groupName, groupData]) => {
+                          const owner = groupData.user;
+                          const name = owner?.name || "User Tidak Diketahui";
+                          const email = owner?.email || "";
+                          const roleRaw = typeof owner?.role === 'object' ? owner?.role?.name : owner?.role;
+                          const roleLabel = formatRoleName(roleRaw);
+                          
+                          // Generate initials for avatar
+                          const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+                          
+                          return (
+                            <tr 
+                              key={`group-${groupName}`}
+                              className="bg-white border-b hover:bg-orange-50/50 cursor-pointer transition-all duration-200 group" 
+                              onClick={() => setActiveGroup(groupName)}
+                            >
+                              <td colSpan={5} className="px-6 py-5">
+                                <div className="flex items-center gap-5">
+                                  {/* User Avatar */}
+                                  <div className="relative">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-400 to-orange-600 text-white font-bold text-lg shadow-sm group-hover:shadow-md transition-all">
+                                      {initials || <Users size={20} />}
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-green-500"></div>
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h4 className="font-bold text-gray-900 text-lg truncate leading-tight">
+                                        {name}
+                                      </h4>
+                                      {roleLabel && (
+                                        <span className="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700 ring-1 ring-inset ring-orange-600/20">
+                                          {roleLabel}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <p className="text-sm text-gray-500 font-medium truncate flex items-center gap-1.5">
+                                        <span className="text-gray-400">@</span> {email || "No email"}
+                                      </p>
+                                      <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+                                      <p className="text-sm text-orange-600 font-semibold flex items-center gap-1.5">
+                                        <FileText size={14} className="opacity-70" />
+                                        {groupData.items.length} file(s)
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center justify-center h-10 w-10 rounded-full group-hover:bg-orange-100 transition-colors">
+                                    <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 transition-transform group-hover:translate-x-1 duration-200" />
+                                  </div>
                                 </div>
-                                <div className="flex-1">
-                                  <div className="font-semibold text-gray-900 text-md">{groupName}</div>
-                                  <div className="text-sm text-gray-500 mt-0.5">{groupData.items.length} file(s)</div>
-                                </div>
-                                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                            </tr>
+                          );
+                        })
                      ) : (
                         <>
                           <tr className="bg-gray-50 border-b">
@@ -601,9 +697,8 @@ export function FileList({ folderId }: FileListProps) {
             </table>
           </div>
         </div>
-      </div>
-
-      {/* Quick View Modal */}
+      )}
+    </div>
       {showQuickView && selectedFile && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 p-4 backdrop-blur-md"
@@ -999,8 +1094,8 @@ export function FileList({ folderId }: FileListProps) {
       {/* Success Modal */}
       {successMessage && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl border border-green-100">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm animate-bounce-short">
               <Check className="h-8 w-8 text-green-600" />
             </div>
             <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
@@ -1009,10 +1104,69 @@ export function FileList({ folderId }: FileListProps) {
             </p>
             <button
               onClick={() => { setSuccessMessage(null); setFileToShare(null); }}
-              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all"
+              className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-green-700 hover:shadow-lg transition-all"
             >
-              Tutup Jendela
+              Lanjutkan
             </button>
+          </div>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl border border-red-100">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-4 shadow-sm">
+              <AlertCircle className="h-8 w-8 text-red-600 animate-pulse" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Ups, Gagal!</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              {errorMessage}
+            </p>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-red-700 hover:shadow-lg transition-all"
+            >
+              Saya Mengerti
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Request Access Modal */}
+      {showRequestModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Minta Akses Folder</h3>
+              <button onClick={() => setShowRequestModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Pesan (Opsional)</label>
+              <textarea
+                value={requestMessage}
+                onChange={(e) => setRequestMessage(e.target.value)}
+                placeholder="Jelaskan mengapa Anda membutuhkan akses ke folder ini..."
+                className="w-full rounded-xl border border-gray-300 p-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[120px] transition-all"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRequestModal(false)}
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleRequestAccess}
+                disabled={requestLoading}
+                className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              >
+                {requestLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Kirim Permintaan'}
+              </button>
+            </div>
           </div>
         </div>
       )}

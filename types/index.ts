@@ -31,6 +31,9 @@ export interface Folder {
   children?: Folder[];
   owner?: User;
   owner_id?: string;
+  owner_name?: string;
+  owner_role?: string;
+  permissions?: FolderPermission[];
 }
 
 export interface FolderTreeNode extends Folder {
@@ -49,6 +52,13 @@ export interface File {
   updated_at: string;
   deleted_at: string | null;
   folder?: Folder;
+  owner_name?: string;
+  owner_role?: string;
+  can_read?: boolean;
+  can_download?: boolean;
+  can_create?: boolean;
+  can_update?: boolean;
+  can_delete?: boolean;
 }
 
 // Permission Types
