@@ -2,18 +2,20 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+type ActiveMenu = 'dashboard' | 'all-folders' | 'recent-files' | 'shared-folders' | 'shared-files' | 'recycle-bin' | null;
+
 interface FolderContextType {
   selectedFolderId: string | null;
   setSelectedFolderId: (id: string | null) => void;
-  activeMenu: 'dashboard' | 'all-folders' | 'recent-files' | 'shared-folders' | 'shared-files' | 'recycle-bin' | null;
-  setActiveMenu: (menu: 'dashboard' | 'all-folders' | 'recent-files' | 'shared-folders' | 'shared-files' | 'recycle-bin' | null) => void;
+  activeMenu: ActiveMenu;
+  setActiveMenu: (menu: ActiveMenu) => void;
 }
 
 const FolderContext = createContext<FolderContextType | undefined>(undefined);
 
 export function FolderProvider({ children }: { children: ReactNode }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [activeMenu, setActiveMenu] = useState<'dashboard' | 'all-folders' | 'recent-files' | 'shared-folders' | 'shared-files' | 'recycle-bin' | null>('dashboard');
+  const [activeMenu, setActiveMenu] = useState<ActiveMenu>('dashboard');
 
   return (
     <FolderContext.Provider value={{ selectedFolderId, setSelectedFolderId, activeMenu, setActiveMenu }}>

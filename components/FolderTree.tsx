@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useFolders } from '@/hooks/useFolders';
+import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
@@ -30,6 +31,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { apiClient } from '@/lib/api/client';
 import toast from 'react-hot-toast';
 
+// ── Folder management item (with create/edit/delete actions) ──
 interface FolderItemProps {
   folder: FolderTreeNode;
   selectedId: string | null;
@@ -157,6 +159,10 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const { activeMenu, setActiveMenu } = useFolderContext();
   const [adminMode, setAdminMode] = useState(false);
   const { folders, loading, error, createFolder, deleteFolder, refresh } = useFolders(adminMode && isAdmin);
+  const { folders: sharedFolders } = useSharedFolders();
+
+  // Computed: user has shared access if any folders are shared with them
+  const hasSharedAccess = sharedFolders.length > 0;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [parentId, setParentId] = useState<string | null>(null);
@@ -452,6 +458,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <Folder className="h-5 w-5 text-orange-600" />
                 <span>All Folders</span>
               </button>
+
               <button
                 onClick={() => {
                   router.push('/dashboard');
@@ -483,9 +490,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               </button>
 
               <div className="my-2 border-t border-gray-200"></div>
-              <div className="px-2 py-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Shared With Me</p>
-              </div>
+
+              {/* ── Shared Folders ── */}
               <button
                 onClick={() => {
                   router.push('/dashboard');
@@ -500,19 +506,30 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <Share2 className="h-5 w-5 text-orange-600" />
                 <span>Shared Folders</span>
               </button>
+
+              {/* ── Shared Files (auto-disabled if no shared access) ── */}
               <button
                 onClick={() => {
+                  if (!hasSharedAccess) return;
                   router.push('/dashboard');
                   onFolderSelect(null);
                   setActiveMenu('shared-files');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'shared-files'
-                  ? 'bg-orange-100 text-orange-700 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                disabled={!hasSharedAccess}
+                title={!hasSharedAccess ? 'Tidak ada file yang dibagikan kepada Anda' : 'File yang dibagikan kepada Anda'}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  !hasSharedAccess
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : activeMenu === 'shared-files'
+                      ? 'bg-orange-100 text-orange-700 font-semibold'
+                      : 'text-gray-700 hover:bg-gray-100'
+                }`}
               >
-                <FileText className="h-5 w-5 text-orange-600" />
+                <FileText className={`h-5 w-5 ${!hasSharedAccess ? 'text-gray-300' : 'text-orange-600'}`} />
                 <span>Shared Files</span>
+                {!hasSharedAccess && (
+                  <Lock className="h-3.5 w-3.5 text-gray-300 ml-auto" />
+                )}
               </button>
             </>
           )}
