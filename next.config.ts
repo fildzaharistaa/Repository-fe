@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ['dashboard.repository-upnvj.online', 'api.repository-upnvj.online'],
 };
+
+
 
 export default nextConfig;

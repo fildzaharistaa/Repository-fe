@@ -10,7 +10,11 @@ import type {
 } from '@/types';
 import { apiLogger } from './logger';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3030/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:3030/api';
+if (typeof window !== 'undefined') {
+  console.log('ApiClient: Using API_BASE_URL:', API_BASE_URL);
+}
+
 
 class ApiClient {
   private getToken(): string | null {
