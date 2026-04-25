@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useFolderContext } from '@/context/FolderContext';
-import { Folder, Loader2 } from 'lucide-react';
+import { Folder, Loader2, Mail, User } from 'lucide-react';
 import { formatDate } from '@/lib/utils/formatters';
 
 export function SharedFoldersView() {
@@ -86,14 +86,28 @@ export function SharedFoldersView() {
                 <h3 className="truncate text-base font-semibold text-gray-900" title={folder.name}>
                   {folder.name}
                 </h3>
-                <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-                  <span className="truncate">Owner: {folder.owner_name}</span>
-                  <span className="ml-2 rounded-md bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600">{folder.owner_role}</span>
+                <div className="mt-2 space-y-1 border-t border-gray-100 pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <User className="h-3 w-3 text-gray-400 shrink-0" />
+                    <span className="text-xs text-gray-600 font-medium truncate">{(folder as any).owner_name || 'Unknown'}</span>
+                  </div>
+                  {(folder as any).owner_email && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                      <span className="text-xs text-gray-400 truncate">{(folder as any).owner_email}</span>
+                    </div>
+                  )}
+                  {(folder as any).owner_role && (
+                    <span className="inline-block mt-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 uppercase">
+                      {(folder as any).owner_role}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                <div className="mt-1 flex items-center text-xs text-gray-400">
                   <span>{formatDate(folder.created_at)}</span>
                 </div>
               </div>
+
             </button>
           ))}
         </div>
