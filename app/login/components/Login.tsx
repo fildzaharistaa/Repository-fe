@@ -461,7 +461,7 @@ export function Login() {
           <div className="login-left-content">
             <div className="campus-badge">
               <div className="campus-badge-dot" />
-              <span>Sistem Repository Aktif</span>
+              <span>Sistem Repository FIK UPNVJ</span>
             </div>
 
             <h2 className="login-left-title">
@@ -588,7 +588,7 @@ export function Login() {
                     Sedang masuk...
                   </>
                 ) : (
-                  'Masuk ke Sistem'
+                  'Masuk'
                 )}
               </button>
 
