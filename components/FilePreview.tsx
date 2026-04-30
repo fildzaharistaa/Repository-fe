@@ -39,7 +39,12 @@ export function FilePreview({ file }: FilePreviewProps) {
         
         // 1. PDF - use iframe with preview URL
         if (mimeType.includes('pdf')) {
-          setPreviewContent({ type: 'pdf', url: apiClient.getPreviewUrl(file.id) });
+          let url = apiClient.getPreviewUrl(file.id);
+          // Hide toolbar (download/print) if user doesn't have download permission
+          if (file.can_download === false) {
+            url += '#toolbar=0&navpanes=0';
+          }
+          setPreviewContent({ type: 'pdf', url });
           setLoading(false);
           return;
         }
