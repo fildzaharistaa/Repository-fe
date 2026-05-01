@@ -204,7 +204,7 @@ export function RoleManagement() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -219,7 +219,7 @@ export function RoleManagement() {
                 setNewUserForm(prev => ({ ...prev, role_id: roles[0].id }));
               }
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-purple-700 hover:to-indigo-700 hover:shadow-lg"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
           >
             <UserPlus className="h-4 w-4" />
             Create New User
@@ -234,17 +234,18 @@ export function RoleManagement() {
           Filter by Role
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+
           {/* All card */}
           <button
             onClick={() => setSelectedRoleFilter(null)}
             className={`rounded-xl border p-4 text-left shadow-sm transition-all hover:shadow-md ${
               selectedRoleFilter === null
                 ? 'border-purple-400 bg-purple-50 ring-2 ring-purple-300'
-                : 'border-gray-100 bg-white'
+                : 'border-purple-100 bg-white'
             }`}
           >
             <div className="mb-2">
-              <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-800">
+              <span className="inline-flex items-center rounded-xl border border-gray-200 bg-orange-100 px-3 py-1 text-xs font-semibold text-purple-800">
                 Semua
               </span>
             </div>
@@ -349,7 +350,7 @@ export function RoleManagement() {
                     <td className="whitespace-nowrap px-6 py-4 text-right">
                       <button
                         onClick={() => openEditModal(user)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-all hover:bg-purple-100 hover:shadow-sm"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 transition-all hover:bg-orange-100 hover:shadow-sm"
                       >
                         <UserCog className="h-3.5 w-3.5" />
                         "Ubah Role"
@@ -391,7 +392,7 @@ export function RoleManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600">
                 <UserCog className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -425,7 +426,7 @@ export function RoleManagement() {
             >
               {roles.map((role: Role) => (
                 <option key={role.id} value={role.id}>
-                  {ROLE_LABELS[role.name] || role.name} — {role.description}
+                  {ROLE_LABELS[role.name] || role.name}
                 </option>
               ))}
             </select>
@@ -434,7 +435,7 @@ export function RoleManagement() {
               <button
                 onClick={handleUpdateRole}
                 disabled={updating || selectedRoleId === selectedUser.role_id}
-                className="flex-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-purple-700 hover:to-indigo-700 hover:shadow-lg disabled:opacity-50"
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg disabled:opacity-50"
               >
                 {updating ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
@@ -461,7 +462,7 @@ export function RoleManagement() {
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
           >
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500">
                 <UserPlus className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -538,7 +539,7 @@ export function RoleManagement() {
               <option value="" disabled hidden>Pilih role...</option>
               {roles.map((role: Role) => (
                 <option key={role.id} value={role.id}>
-                  {ROLE_LABELS[role.name] || role.name} — {role.description}
+                  {ROLE_LABELS[role.name] || role.name}
                 </option>
               ))}
             </select>
@@ -547,7 +548,7 @@ export function RoleManagement() {
               <button
                 type="submit"
                 disabled={creating || !newUserForm.name || !newUserForm.email || !newUserForm.password}
-                className="flex-1 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-green-700 hover:to-emerald-700 hover:shadow-lg disabled:opacity-50"
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-600 hover:to-orange-700 hover:shadow-lg disabled:opacity-50"
               >
                 {creating ? 'Menyimpan...' : 'Tambah Pengguna'}
               </button>

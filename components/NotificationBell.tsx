@@ -288,7 +288,7 @@ export function NotificationBell() {
                           {notif.request_type === 'hierarchy' ? (
                             <>
                               <p className="text-sm text-gray-900">
-                                <span className="font-medium">{notif.requesterName}</span>
+                                <span className="font-medium">{notif.requesterName} - {notif.requesterEmail} </span>
                                 <br />
                                 Request tambah kedalaman folder ke{' '}
                                 <span className="font-bold text-orange-600">{notif.requested_depth} level</span>

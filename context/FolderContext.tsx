@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type ActiveMenu = 'dashboard' | 'all-folders' | 'recent-files' | 'shared-folders' | 'shared-files' | 'recycle-bin' | null;
+type ActiveMenu = 'dashboard' | 'all-folders' | 'recent-files' | 'all-files' | 'shared-folders' | 'shared-files' | 'recycle-bin' | null;
 
 interface FolderContextType {
   selectedFolderId: string | null;

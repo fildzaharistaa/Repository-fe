@@ -463,15 +463,15 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 onClick={() => {
                   router.push('/dashboard');
                   onFolderSelect(null);
-                  setActiveMenu('recent-files');
+                  setActiveMenu('all-files');
                 }}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'recent-files'
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'all-files'
                   ? 'bg-orange-100 text-orange-700 font-semibold'
                   : 'text-gray-700 hover:bg-gray-100'
                   }`}
               >
-                <Clock className="h-5 w-5 text-orange-600" />
-                <span>Recent Files</span>
+                <FileText className="h-5 w-5 text-orange-600" />
+                <span>All Files</span>
               </button>
 
               <button
@@ -531,6 +531,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   <Lock className="h-3.5 w-3.5 text-gray-300 ml-auto" />
                 )}
               </button>
+
+
             </>
           )}
           {isAdmin && (

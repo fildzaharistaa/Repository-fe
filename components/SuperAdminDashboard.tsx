@@ -465,7 +465,7 @@ export function SuperAdminDashboard() {
                 <div key={req.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 bg-gray-50">
                   <div>
                     <p className="text-sm font-medium text-gray-900">
-                      {req.requester?.name || req.requester?.email || 'User'}
+                      {req.requester?.name} - {req.requester?.email}
                     </p>
                     <p className="text-xs text-gray-500">
                       Request ke <span className="font-bold text-orange-600">{req.requested_depth} level</span>

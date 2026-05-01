@@ -554,7 +554,7 @@ class ApiClient {
     });
   }
 
-  async getSharedFiles(): Promise<(FileEntity & { owner_name: string })[]> {
+  async getSharedFiles(): Promise<FileEntity[]> {
     return this.request('/access-requests/shared-files');
   }
 
