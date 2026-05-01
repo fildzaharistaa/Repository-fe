@@ -40,6 +40,7 @@ export function useUsers() {
     id: string,
     userData: Partial<{
       name: string;
+      email: string;
       password: string;
       role_id: string;
     }>
