@@ -5,7 +5,7 @@ import { FileList } from '@/app/dashboard/components/FileList';
 import { DashboardStats } from '@/components/DashboardStats';
 import { SuperAdminDashboard } from '@/components/SuperAdminDashboard';
 import { AllFoldersView } from '@/components/AllFoldersView';
-import { RecentFilesView } from '@/components/RecentFilesView';
+import { AllFilesView } from '@/components/AllFilesView';
 import { SharedFoldersView } from '@/components/SharedFoldersView';
 import { SharedFilesView } from '@/components/SharedFilesView';
 import { RecycleBinView } from '@/components/RecycleBinView';
@@ -50,9 +50,9 @@ function DashboardContent() {
             <AllFoldersView />
           </div>
         )}
-        {activeMenu === 'recent-files' && (
+        {activeMenu === 'all-files' && (
           <div>
-            <RecentFilesView />
+            <AllFilesView />
           </div>
         )}
         {activeMenu === 'shared-folders' && (

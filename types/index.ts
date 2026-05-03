@@ -52,7 +52,9 @@ export interface File {
   updated_at: string;
   deleted_at: string | null;
   folder?: Folder;
+  owner_id?: string;
   owner_name?: string;
+  owner_email?: string;
   owner_role?: string;
   can_read?: boolean;
   can_download?: boolean;

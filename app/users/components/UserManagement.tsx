@@ -272,7 +272,7 @@ export function UserManagement() {
                   >
                     {roles.map((role) => (
                       <option key={role.id} value={role.id}>
-                        {role.name.charAt(0).toUpperCase() + role.name.slice(1)} {role.description ? `- ${role.description}` : ''}
+                        {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
                       </option>
                     ))}
                   </select>

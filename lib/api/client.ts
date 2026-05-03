@@ -333,6 +333,10 @@ class ApiClient {
     });
   }
 
+  async getFileShares(fileId: string): Promise<any[]> {
+    return this.request<any[]>(`/access-requests/files/${fileId}/shares`);
+  }
+
   async downloadFile(id: string): Promise<Blob> {
     const token = this.getToken();
     if (!token) {
@@ -554,7 +558,7 @@ class ApiClient {
     });
   }
 
-  async getSharedFiles(): Promise<(FileEntity & { owner_name: string })[]> {
+  async getSharedFiles(): Promise<FileEntity[]> {
     return this.request('/access-requests/shared-files');
   }
 

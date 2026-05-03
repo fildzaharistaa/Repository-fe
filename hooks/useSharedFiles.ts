@@ -5,7 +5,7 @@ import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 
 export function useSharedFiles() {
-  const [files, setFiles] = useState<(FileEntity & { owner_name: string })[]>([]);
+  const [files, setFiles] = useState<FileEntity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

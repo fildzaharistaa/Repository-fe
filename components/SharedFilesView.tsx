@@ -4,19 +4,16 @@ import { useState } from 'react';
 import { useSharedFiles } from '@/hooks/useSharedFiles';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
-import { Eye, Download, FileText, Loader2, X, Trash2 } from 'lucide-react';
+import { Eye, Download, FileText, Loader2, X } from 'lucide-react';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import type { File as FileEntity } from '@/types';
-import { ConfirmModal } from './ConfirmModal';
-import toast from 'react-hot-toast';
+
 
 export function SharedFilesView() {
-  const { files, loading, error, downloadFile, deleteFile } = useSharedFiles();
+  const { files, loading, error, downloadFile } = useSharedFiles();
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
   const [showQuickView, setShowQuickView] = useState(false);
-  const [fileToDelete, setFileToDelete] = useState<FileEntity | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
   const uniqueRoles = Array.from(new Set(files.map((f: any) => f.owner_role).filter(Boolean)));
@@ -38,25 +35,7 @@ export function SharedFilesView() {
     }
   };
 
-  const handleDelete = (file: FileEntity) => {
-    setFileToDelete(file);
-    setShowDeleteConfirm(true);
-  };
 
-  const confirmDelete = async () => {
-    if (!fileToDelete) return;
-    try {
-      setDeleteLoading(true);
-      await deleteFile(fileToDelete.id);
-      toast.success(`Akses file "${fileToDelete.name}" berhasil dihapus.`);
-      setShowDeleteConfirm(false);
-      setFileToDelete(null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal menghapus file');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -104,6 +83,7 @@ export function SharedFilesView() {
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Name</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Owner</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Email</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Role</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Size</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Shared On</th>
@@ -145,8 +125,11 @@ export function SharedFilesView() {
                       </div>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 font-medium">
                     {file.owner_name}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    {file.owner_email || '-'}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
@@ -175,15 +158,7 @@ export function SharedFilesView() {
                           <Download className="h-3.5 w-3.5" /> Download
                         </button>
                       )}
-                      {file.can_delete && (
-                        <button
-                          onClick={() => handleDelete(file)}
-                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete
-                        </button>
-                      )}
+
                     </div>
                   </td>
                 </tr>
@@ -236,17 +211,7 @@ export function SharedFilesView() {
           </div>
         </div>
       )}
-      <ConfirmModal
-        open={showDeleteConfirm}
-        title="Hapus File"
-        description={`Apakah Anda yakin ingin menghapus "${fileToDelete?.name}"?`}
-        loading={deleteLoading}
-        onCancel={() => {
-          setShowDeleteConfirm(false);
-          setFileToDelete(null);
-        }}
-        onConfirm={confirmDelete}
-      />
+
     </div>
   );
 }
