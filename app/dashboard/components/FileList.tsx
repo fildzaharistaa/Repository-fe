@@ -28,6 +28,8 @@ export function FileList({ folderId }: FileListProps) {
   const [subfolders, setSubfolders] = useState<any[]>([]);
   const { user } = useAuth();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
+  const [canDownload, setCanDownload] = useState(true);
+  const [folderPermissions, setFolderPermissions] = useState<any[]>([]);
 
   const isDosenOrTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
   const hasEditRights = isOwnerOrAdmin || isDosenOrTendik;
@@ -39,24 +41,45 @@ export function FileList({ folderId }: FileListProps) {
           setFolderName(folder.name);
           setParentFolderId(folder.parent_id);
           const ownerId = folder.owner?.id || (folder as any).owner_id;
-          setIsOwnerOrAdmin(
+          const ownerOrAdmin = 
             user?.id === ownerId ||
             user?.role?.name === 'admin' ||
-            user?.role?.name === 'super admin'
-          );
+            user?.role?.name === 'super admin';
+          setIsOwnerOrAdmin(ownerOrAdmin);
+
+          // Check if current user has download permission for this folder
+          if (ownerOrAdmin) {
+            setCanDownload(true);
+          } else if (folder.permissions && user) {
+            const userRoleId = typeof user.role === 'object' ? user.role?.id : null;
+            const hasDownload = folder.permissions.some((p: any) =>
+              (p.user_id === user.id && p.can_download) ||
+              (p.role_id && p.role_id === userRoleId && p.can_download)
+            );
+            setCanDownload(hasDownload);
+          } else {
+            setCanDownload(false);
+          }
+
           // Sort subfolders by name
           const sortedSubfolders = (folder.children || []).sort((a: any, b: any) => a.name.localeCompare(b.name));
           setSubfolders(sortedSubfolders);
+
+          // Store folder permissions for syncing with file share modal
+          setFolderPermissions(folder.permissions || []);
         })
         .catch(err => {
           console.error('Failed to fetch folder info', err);
           setSubfolders([]);
           setIsOwnerOrAdmin(false);
+          setCanDownload(false);
+          setFolderPermissions([]);
         });
     } else {
       setFolderName(null);
       setSubfolders([]);
       setIsOwnerOrAdmin(true);
+      setCanDownload(true);
     }
   }, [folderId, user]);
   const [showQuickView, setShowQuickView] = useState(false);
@@ -109,15 +132,29 @@ export function FileList({ folderId }: FileListProps) {
       // Fetch existing shares for this file
       apiClient.getFileShares(fileToShare.id)
         .then(shares => {
+          const perms: Record<string, { read: boolean, download: boolean }> = {};
+
+          // First, pre-fill from folder-level user permissions (can_download)
+          folderPermissions.forEach((fp: any) => {
+            if (fp.user_id && fp.can_download) {
+              perms[fp.user_id] = {
+                read: true,
+                download: true
+              };
+            }
+          });
+
+          // Then, overlay with file-level shares (AccessRequest)
           if (Array.isArray(shares)) {
-            const perms: Record<string, { read: boolean, download: boolean }> = {};
             let msg = '';
 
             shares.forEach(s => {
               if (s.requester && s.requester.id) {
+                // File-level share overrides folder-level if present
+                const existing = perms[s.requester.id];
                 perms[s.requester.id] = {
-                  read: !!s.can_read,
-                  download: !!s.can_download
+                  read: !!s.can_read || (existing?.read ?? false),
+                  download: !!s.can_download || (existing?.download ?? false)
                 };
                 if (s.response_message && !msg) {
                   msg = s.response_message;
@@ -125,9 +162,10 @@ export function FileList({ folderId }: FileListProps) {
               }
             });
 
-            setUserPermissions(perms);
             if (msg) setShareMessage(msg);
           }
+
+          setUserPermissions(perms);
         })
         .catch(err => console.error('Failed to fetch file shares', err));
     }
@@ -267,13 +305,13 @@ export function FileList({ folderId }: FileListProps) {
       const uPerms = Object.entries(userPermissions)
         .map(([userId, perms]) => ({
           user_id: userId,
-          can_read: perms.read,
+          can_read: perms.download,
           can_create: false,
           can_update: false,
           can_delete: false,
           can_download: perms.download
         }))
-        .filter(p => p.can_read || p.can_download);
+        .filter(p => p.can_download);
 
       if (uPerms.length === 0) {
         toast.error('Pilih minimal satu user untuk dibagikan file ini.');
@@ -503,14 +541,16 @@ export function FileList({ folderId }: FileListProps) {
                 Rename
               </button>
             )}
-            <button
-              onClick={() => handleDownload(file)}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-all hover:shadow-sm"
-              title="Download File"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download
-            </button>
+            {canDownload && (
+              <button
+                onClick={() => handleDownload(file)}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-all hover:shadow-sm"
+                title="Download File"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </button>
+            )}
             {hasEditRights && (
               <button
                 onClick={() => handleDelete(file)}
@@ -738,13 +778,15 @@ export function FileList({ folderId }: FileListProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleDownload(selectedFile)}
-                  className="flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </button>
+                {canDownload && (
+                  <button
+                    onClick={() => handleDownload(selectedFile)}
+                    className="flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </button>
+                )}
                 <button
                   onClick={() => setShowQuickView(false)}
                   className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
@@ -959,7 +1001,7 @@ export function FileList({ folderId }: FileListProps) {
                 <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
                   <p className="text-xs text-gray-500">User yang dipilih:</p>
                   <p className="text-lg font-bold text-indigo-600">
-                    {Object.values(userPermissions).filter(p => p.read || p.download).length} user
+                    {Object.values(userPermissions).filter(p => p.download).length} user
                   </p>
                 </div>
               </div>
@@ -1025,14 +1067,13 @@ export function FileList({ folderId }: FileListProps) {
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
                           <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
-                          <th className="px-2 py-3 font-semibold text-center w-24">VIEW</th>
                           <th className="px-2 py-3 font-semibold text-center w-24">DOWNLOAD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">
+                            <td colSpan={2} className="px-4 py-8 text-center text-gray-500 italic">
                               Tidak ada user yang ditemukan
                             </td>
                           </tr>
@@ -1048,9 +1089,6 @@ export function FileList({ folderId }: FileListProps) {
                                     <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
                                     <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
                                   </div>
-                                </td>
-                                <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
                                   <input type="checkbox" checked={perms.download} onChange={() => toggleUserPermission(u.id, 'download')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
@@ -1073,7 +1111,7 @@ export function FileList({ folderId }: FileListProps) {
                   </button>
                   <button
                     onClick={handleShareSubmit}
-                    disabled={shareLoading || Object.values(userPermissions).filter(p => p.read || p.download).length === 0}
+                    disabled={shareLoading || Object.values(userPermissions).filter(p => p.download).length === 0}
                     className="flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
