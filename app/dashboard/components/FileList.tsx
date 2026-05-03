@@ -40,8 +40,8 @@ export function FileList({ folderId }: FileListProps) {
           setParentFolderId(folder.parent_id);
           const ownerId = folder.owner?.id || (folder as any).owner_id;
           setIsOwnerOrAdmin(
-            user?.id === ownerId || 
-            user?.role?.name === 'admin' || 
+            user?.id === ownerId ||
+            user?.role?.name === 'admin' ||
             user?.role?.name === 'super admin'
           );
           // Sort subfolders by name
@@ -66,7 +66,7 @@ export function FileList({ folderId }: FileListProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileEntity | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  
+
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [fileToRename, setFileToRename] = useState<FileEntity | null>(null);
   const [newFileName, setNewFileName] = useState('');
@@ -88,47 +88,73 @@ export function FileList({ folderId }: FileListProps) {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
-  const [userPermissions, setUserPermissions] = useState<Record<string, {read:boolean, download:boolean}>>({});
-  const [shareWithWD1, setShareWithWD1] = useState(false);
-  const [shareWithWD2, setShareWithWD2] = useState(false);
-  const [shareWithWD3, setShareWithWD3] = useState(false);
-  const [shareWithDosen, setShareWithDosen] = useState(false);
-  const [shareWithTendik, setShareWithTendik] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<Record<string, { read: boolean, download: boolean }>>({});
+
   const [shareMessage, setShareMessage] = useState('');
 
   useEffect(() => {
-    if (showShareModal) {
+    if (showShareModal && fileToShare) {
+      // Fetch users
       apiClient.getUsers()
         .then(res => {
-          const fetchedUsers = res.data || res;
-          if (Array.isArray(fetchedUsers)) setUsers(fetchedUsers);
+          const fetchedUsers = (res as any).data || res;
+          if (Array.isArray(fetchedUsers)) {
+            setUsers(fetchedUsers);
+          } else if (fetchedUsers && (fetchedUsers as any).data && Array.isArray((fetchedUsers as any).data)) {
+            setUsers((fetchedUsers as any).data);
+          }
         })
-        .catch(err => console.error(err));
+        .catch(err => console.error('Failed to fetch users', err));
+
+      // Fetch existing shares for this file
+      apiClient.getFileShares(fileToShare.id)
+        .then(shares => {
+          if (Array.isArray(shares)) {
+            const perms: Record<string, { read: boolean, download: boolean }> = {};
+            let msg = '';
+
+            shares.forEach(s => {
+              if (s.requester && s.requester.id) {
+                perms[s.requester.id] = {
+                  read: !!s.can_read,
+                  download: !!s.can_download
+                };
+                if (s.response_message && !msg) {
+                  msg = s.response_message;
+                }
+              }
+            });
+
+            setUserPermissions(perms);
+            if (msg) setShareMessage(msg);
+          }
+        })
+        .catch(err => console.error('Failed to fetch file shares', err));
     }
-  }, [showShareModal]);
+  }, [showShareModal, fileToShare]);
 
   const groupedFiles = useMemo(() => {
     if (!isOwnerOrAdmin || isDosenOrTendik) return null;
-    
+
     const groups: Record<string, { user: any, items: FileEntity[] }> = {};
     files.forEach(file => {
-       const ownerData = (file as any).owner;
-       const ownerName = ownerData?.name || '';
-       const ownerEmail = ownerData?.email || '';
-       
-       let displayUser = "User Tidak Diketahui";
-       if (ownerName && ownerEmail) {
-           displayUser = `${ownerName} (${ownerEmail})`;
-       } else if (ownerName) {
-           displayUser = ownerName;
-       } else if (ownerEmail) {
-           displayUser = ownerEmail;
-       }
-       
-       const keyStr = displayUser;
-       
-       if (!groups[keyStr]) groups[keyStr] = { user: ownerData, items: [] };
-       groups[keyStr].items.push(file);
+      const ownerData = (file as any).owner;
+      const ownerName = ownerData?.name || '';
+      const ownerEmail = ownerData?.email || '';
+
+      let displayUser = "User Tidak Diketahui";
+      if (ownerName && ownerEmail) {
+        displayUser = `${ownerName} (${ownerEmail})`;
+      } else if (ownerName) {
+        displayUser = ownerName;
+      } else if (ownerEmail) {
+        displayUser = ownerEmail;
+      }
+
+      const keyStr = displayUser;
+
+      if (!groups[keyStr]) groups[keyStr] = { user: ownerData, items: [] };
+      groups[keyStr].items.push(file);
     });
     return groups;
   }, [files, isOwnerOrAdmin, isDosenOrTendik]);
@@ -158,12 +184,12 @@ export function FileList({ folderId }: FileListProps) {
   const filteredUsers = users.filter(u => {
     const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
     const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
-    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
-                          (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
+    const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+      (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
     return matchesRole && matchesSearch;
   });
 
-  const toggleUserPermission = (userId: string, perm: keyof {read:boolean, download:boolean}) => {
+  const toggleUserPermission = (userId: string, perm: keyof { read: boolean, download: boolean }) => {
     setUserPermissions(prev => {
       const current = prev[userId] || { read: false, download: false };
       return {
@@ -179,11 +205,6 @@ export function FileList({ folderId }: FileListProps) {
     setUserSearchTerm('');
     setSelectedRoleFilter(null);
     setUserPermissions({});
-    setShareWithWD1(false);
-    setShareWithWD2(false);
-    setShareWithWD3(false);
-    setShareWithDosen(false);
-    setShareWithTendik(false);
     setShareMessage('');
   };
 
@@ -214,7 +235,7 @@ export function FileList({ folderId }: FileListProps) {
 
   const confirmRename = async () => {
     if (!fileToRename || !newFileName.trim()) return;
-    
+
     // Add extension back
     const lastDotIndex = fileToRename.name.lastIndexOf('.');
     const ext = lastDotIndex !== -1 ? fileToRename.name.substring(lastDotIndex) : '';
@@ -242,13 +263,6 @@ export function FileList({ folderId }: FileListProps) {
     if (!fileToShare) return;
     try {
       setShareLoading(true);
-      
-      const shareRoles: string[] = [];
-      if (shareWithWD1) shareRoles.push('Wakil Dekan 1');
-      if (shareWithWD2) shareRoles.push('Wakil Dekan 2');
-      if (shareWithWD3) shareRoles.push('Wakil Dekan 3');
-      if (shareWithDosen) shareRoles.push('Dosen');
-      if (shareWithTendik) shareRoles.push('Tendik');
 
       const uPerms = Object.entries(userPermissions)
         .map(([userId, perms]) => ({
@@ -261,9 +275,14 @@ export function FileList({ folderId }: FileListProps) {
         }))
         .filter(p => p.can_read || p.can_download);
 
+      if (uPerms.length === 0) {
+        toast.error('Pilih minimal satu user untuk dibagikan file ini.');
+        setShareLoading(false);
+        return;
+      }
+
       await apiClient.shareFile(fileToShare.id, {
-        share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
-        user_permissions: uPerms.length > 0 ? uPerms : undefined,
+        user_permissions: uPerms,
         message: shareMessage.trim() || undefined
       });
 
@@ -313,12 +332,12 @@ export function FileList({ folderId }: FileListProps) {
       }
 
       if (errorFiles.length > 0) {
-        const errorMsg = errorFiles.length === 1 
+        const errorMsg = errorFiles.length === 1
           ? `File "${errorFiles[0]}" gagal diunggah karena melebihi batas maksimum 5MB.`
           : `${errorFiles.length} file gagal diunggah karena melebihi batas maksimum 5MB.`;
-        
+
         setErrorMessage(errorMsg);
-        
+
         if (successCount > 0) {
           setSuccessMessage(`${successCount} file lainnya berhasil diunggah.`);
         }
@@ -390,7 +409,7 @@ export function FileList({ folderId }: FileListProps) {
 
     if (error) {
       const isPermissionError = error.toLowerCase().includes('permission') || error.toLowerCase().includes('izin');
-      
+
       return (
         <div className="flex h-full items-center justify-center bg-white p-6">
           <div className="w-full max-w-md rounded-2xl border border-red-100 bg-red-50 p-8 text-center shadow-sm">
@@ -399,7 +418,7 @@ export function FileList({ folderId }: FileListProps) {
             </div>
             <h3 className="text-xl font-bold text-red-800">Akses Ditolak</h3>
             <p className="mt-2 text-sm text-red-600 mb-6 leading-relaxed">{error}</p>
-            
+
             {isPermissionError && (
               <div className="space-y-3">
                 <button
@@ -514,197 +533,197 @@ export function FileList({ folderId }: FileListProps) {
         {renderStateContent() || (
           <div className="p-6">
             <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {folderId && (
+              <div className="flex items-center gap-3">
+                {folderId && (
+                  <button
+                    onClick={() => setSelectedFolderId(parentFolderId)}
+                    className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                    title="Kembali ke folder sebelumnya"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
+                  <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
+                </div>
+              </div>
+              {folderId && hasEditRights && (
                 <button
-                  onClick={() => setSelectedFolderId(parentFolderId)}
-                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                  title="Kembali ke folder sebelumnya"
+                  onClick={() => setShowUploadModal(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <Upload className="h-4 w-4" />
+                  Upload Files
                 </button>
               )}
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">{folderName ? `${folderName}` : 'Files'}</h2>
-                <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
-              </div>
             </div>
-            {folderId && hasEditRights && (
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
-              >
-                <Upload className="h-4 w-4" />
-                Upload Files
-              </button>
-            )}
-          </div>
-          
-          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Name
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Size
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Uploaded
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {files.length === 0 && subfolders.length === 0 ? (
+
+            <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <FileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                      <p className="text-sm font-medium text-gray-900">Folder is empty</p>
-                      <p className="mt-1 text-sm text-gray-500">Upload files to get started</p>
-                    </td>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Type
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Size
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Uploaded
+                    </th>
+                    <th scope="col" className="relative px-6 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                ) : (
-                  <>
-                  {subfolders.map((subfolder) => (
-                    <tr 
-                      key={`folder-${subfolder.id}`} 
-                      className="hover:bg-orange-50 transition-colors cursor-pointer group"
-                      onClick={() => setSelectedFolderId(subfolder.id)}
-                    >
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <div className="flex items-center">
-                          <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600 group-hover:bg-orange-200 transition-colors">
-                            <Folder className="h-4 w-4" fill="currentColor" fillOpacity={0.2} />
-                          </span>
-                          <div>
-                            <span className="text-sm font-semibold text-gray-900 block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">
-                              {subfolder.name}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800">
-                          Folder
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        -
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {formatDate(subfolder.created_at)}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                        <div className="flex items-center justify-end">
-                          <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
-                        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {files.length === 0 && subfolders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <FileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                        <p className="text-sm font-medium text-gray-900">Folder is empty</p>
+                        <p className="mt-1 text-sm text-gray-500">Upload files to get started</p>
                       </td>
                     </tr>
-                  ))}
-                  {groupedFiles ? (
-                     !activeGroup ? (
-                        Object.entries(groupedFiles).map(([groupName, groupData]) => {
-                          const owner = groupData.user;
-                          const name = owner?.name || "User Tidak Diketahui";
-                          const email = owner?.email || "";
-                          const roleRaw = typeof owner?.role === 'object' ? owner?.role?.name : owner?.role;
-                          const roleLabel = formatRoleName(roleRaw);
-                          
-                          // Generate initials for avatar
-                          const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
-                          
-                          return (
-                            <tr 
-                              key={`group-${groupName}`}
-                              className="bg-white border-b hover:bg-orange-50/50 cursor-pointer transition-all duration-200 group" 
-                              onClick={() => setActiveGroup(groupName)}
-                            >
-                              <td colSpan={5} className="px-6 py-5">
-                                <div className="flex items-center gap-5">
-                                  {/* User Avatar */}
-                                  <div className="relative">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-400 to-orange-600 text-white font-bold text-lg shadow-sm group-hover:shadow-md transition-all">
-                                      {initials || <Users size={20} />}
-                                    </div>
-                                    <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-green-500"></div>
-                                  </div>
+                  ) : (
+                    <>
+                      {subfolders.map((subfolder) => (
+                        <tr
+                          key={`folder-${subfolder.id}`}
+                          className="hover:bg-orange-50 transition-colors cursor-pointer group"
+                          onClick={() => setSelectedFolderId(subfolder.id)}
+                        >
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <div className="flex items-center">
+                              <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600 group-hover:bg-orange-200 transition-colors">
+                                <Folder className="h-4 w-4" fill="currentColor" fillOpacity={0.2} />
+                              </span>
+                              <div>
+                                <span className="text-sm font-semibold text-gray-900 block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">
+                                  {subfolder.name}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800">
+                              Folder
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                            -
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                            {formatDate(subfolder.created_at)}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                            <div className="flex items-center justify-end">
+                              <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {groupedFiles ? (
+                        !activeGroup ? (
+                          Object.entries(groupedFiles).map(([groupName, groupData]) => {
+                            const owner = groupData.user;
+                            const name = owner?.name || "User Tidak Diketahui";
+                            const email = owner?.email || "";
+                            const roleRaw = typeof owner?.role === 'object' ? owner?.role?.name : owner?.role;
+                            const roleLabel = formatRoleName(roleRaw);
 
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-bold text-gray-900 text-lg truncate leading-tight">
-                                        {name}
-                                      </h4>
-                                      {roleLabel && (
-                                        <span className="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700 ring-1 ring-inset ring-orange-600/20">
-                                          {roleLabel}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <p className="text-sm text-gray-500 font-medium truncate flex items-center gap-1.5">
-                                        <span className="text-gray-400">@</span> {email || "No email"}
-                                      </p>
-                                      <span className="h-1 w-1 rounded-full bg-gray-300"></span>
-                                      <p className="text-sm text-orange-600 font-semibold flex items-center gap-1.5">
-                                        <FileText size={14} className="opacity-70" />
-                                        {groupData.items.length} file(s)
-                                      </p>
-                                    </div>
-                                  </div>
+                            // Generate initials for avatar
+                            const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
-                                  <div className="flex items-center justify-center h-10 w-10 rounded-full group-hover:bg-orange-100 transition-colors">
-                                    <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 transition-transform group-hover:translate-x-1 duration-200" />
+                            return (
+                              <tr
+                                key={`group-${groupName}`}
+                                className="bg-white border-b hover:bg-orange-50/50 cursor-pointer transition-all duration-200 group"
+                                onClick={() => setActiveGroup(groupName)}
+                              >
+                                <td colSpan={5} className="px-6 py-5">
+                                  <div className="flex items-center gap-5">
+                                    {/* User Avatar */}
+                                    <div className="relative">
+                                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-400 to-orange-600 text-white font-bold text-lg shadow-sm group-hover:shadow-md transition-all">
+                                        {initials || <Users size={20} />}
+                                      </div>
+                                      <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-green-500"></div>
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-bold text-gray-900 text-lg truncate leading-tight">
+                                          {name}
+                                        </h4>
+                                        {roleLabel && (
+                                          <span className="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700 ring-1 ring-inset ring-orange-600/20">
+                                            {roleLabel}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <p className="text-sm text-gray-500 font-medium truncate flex items-center gap-1.5">
+                                          <span className="text-gray-400">@</span> {email || "No email"}
+                                        </p>
+                                        <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+                                        <p className="text-sm text-orange-600 font-semibold flex items-center gap-1.5">
+                                          <FileText size={14} className="opacity-70" />
+                                          {groupData.items.length} file(s)
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-center h-10 w-10 rounded-full group-hover:bg-orange-100 transition-colors">
+                                      <ChevronRight className="h-6 w-6 text-gray-400 group-hover:text-orange-600 transition-transform group-hover:translate-x-1 duration-200" />
+                                    </div>
                                   </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <>
+                            <tr className="bg-gray-50 border-b">
+                              <td colSpan={5} className="px-6 py-3">
+                                <button onClick={() => setActiveGroup(null)} className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                                  <ArrowLeft className="w-4 h-4" />
+                                  Back to list
+                                </button>
+                              </td>
+                            </tr>
+                            <tr className="bg-orange-50/50 border-b">
+                              <td colSpan={5} className="px-6 py-2">
+                                <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                  <Users className="w-4 h-4 text-orange-600" />
+                                  Files by: <span className="text-gray-900">{activeGroup}</span>
                                 </div>
                               </td>
                             </tr>
-                          );
-                        })
-                     ) : (
-                        <>
-                          <tr className="bg-gray-50 border-b">
-                             <td colSpan={5} className="px-6 py-3">
-                                 <button onClick={() => setActiveGroup(null)} className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                                     <ArrowLeft className="w-4 h-4" />
-                                     Back to list
-                                 </button>
-                             </td>
-                          </tr>
-                          <tr className="bg-orange-50/50 border-b">
-                             <td colSpan={5} className="px-6 py-2">
-                                <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                   <Users className="w-4 h-4 text-orange-600" />
-                                   Files by: <span className="text-gray-900">{activeGroup}</span>
-                                </div>
-                             </td>
-                          </tr>
-                          {groupedFiles[activeGroup]?.items.map((file) => renderFileRow(file, false))}
-                        </>
-                     )
-                  ) : (
-                    files.map((file) => renderFileRow(file, false))
+                            {groupedFiles[activeGroup]?.items.map((file) => renderFileRow(file, false))}
+                          </>
+                        )
+                      ) : (
+                        files.map((file) => renderFileRow(file, false))
+                      )}
+                    </>
                   )}
-                  </>
-                )}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
       {showQuickView && selectedFile && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 p-4 backdrop-blur-md"
           onClick={() => setShowQuickView(false)}
         >
-          <div 
+          <div
             className="relative w-full max-w-5xl rounded-xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -744,11 +763,11 @@ export function FileList({ folderId }: FileListProps) {
 
       {/* Upload Modal */}
       {showUploadModal && folderId && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 p-4 backdrop-blur-md"
           onClick={() => setShowUploadModal(false)}
         >
-          <div 
+          <div
             className="relative w-full max-w-2xl rounded-xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -770,11 +789,10 @@ export function FileList({ folderId }: FileListProps) {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`rounded-xl border-2 border-dashed p-8 text-center transition-all ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-100 shadow-lg scale-105'
-                    : 'border-blue-300 bg-linear-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
-                }`}
+                className={`rounded-xl border-2 border-dashed p-8 text-center transition-all ${isDragging
+                  ? 'border-blue-500 bg-blue-100 shadow-lg scale-105'
+                  : 'border-blue-300 bg-linear-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-md'
+                  }`}
               >
                 <input
                   ref={fileInputRef}
@@ -815,11 +833,11 @@ export function FileList({ folderId }: FileListProps) {
 
       {/* Rename Modal */}
       {showRenameModal && fileToRename && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 p-4 backdrop-blur-md"
           onClick={() => !renameLoading && setShowRenameModal(false)}
         >
-          <div 
+          <div
             className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -866,19 +884,19 @@ export function FileList({ folderId }: FileListProps) {
 
       {/* Share Modal */}
       {showShareModal && fileToShare && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 p-4 backdrop-blur-sm"
           onClick={() => !shareLoading && resetShareModal()}
         >
-          <div 
+          <div
             className="flex w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Modal */}
             <div className="flex items-center justify-between border-b border-gray-100 bg-indigo-50 px-6 py-4">
               <div className="flex items-center gap-3 text-indigo-700">
-                 <Share2 className="h-5 w-5" />
-                 <h3 className="text-lg font-bold text-gray-900">Bagikan File</h3>
+                <Share2 className="h-5 w-5" />
+                <h3 className="text-lg font-bold text-gray-900">Bagikan File</h3>
               </div>
               <button
                 onClick={resetShareModal}
@@ -889,7 +907,7 @@ export function FileList({ folderId }: FileListProps) {
             </div>
 
             <div className="flex flex-col md:flex-row h-[500px]">
-              {/* Left Sidebar - Configurations */}
+              {/* Left Sidebar - File Info & Message */}
               <div className="w-full md:w-1/3 border-r border-gray-100 bg-white p-6 overflow-y-auto">
                 <div className="mb-6">
                   <label className="mb-2 block text-sm font-semibold text-gray-700">Informasi File</label>
@@ -903,27 +921,11 @@ export function FileList({ folderId }: FileListProps) {
                 </div>
 
                 <div className="mb-6">
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
-                  <p className="text-xs text-gray-500 mb-3">Pilih role untuk membagikan akses keseluruhan ke file ini.</p>
-                  
-                  <div className="space-y-2">
-                    {[
-                      { id: 'wd1', label: 'Wakil Dekan 1', checked: shareWithWD1, set: setShareWithWD1 },
-                      { id: 'wd2', label: 'Wakil Dekan 2', checked: shareWithWD2, set: setShareWithWD2 },
-                      { id: 'wd3', label: 'Wakil Dekan 3', checked: shareWithWD3, set: setShareWithWD3 },
-                      { id: 'dosen', label: 'Dosen', checked: shareWithDosen, set: setShareWithDosen },
-                      { id: 'tendik', label: 'Tendik', checked: shareWithTendik, set: setShareWithTendik },
-                    ].map(role => (
-                      <label key={role.id} className={`flex items-center gap-3 p-2 rounded-md border text-sm cursor-pointer ${role.checked ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'}`}>
-                        <input
-                          type="checkbox"
-                          checked={role.checked}
-                          onChange={(e) => role.set(e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="font-medium text-gray-700">{role.label}</span>
-                      </label>
-                    ))}
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Cara Berbagi</label>
+                  <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3">
+                    <p className="text-xs text-indigo-700 leading-relaxed">
+                      Centang user di tabel sebelah kanan untuk memberi akses <strong>View</strong> dan/atau <strong>Download</strong> pada file ini.
+                    </p>
                   </div>
                 </div>
 
@@ -936,44 +938,50 @@ export function FileList({ folderId }: FileListProps) {
                       if (e.target.value.length <= 500) setShareMessage(e.target.value);
                     }}
                     placeholder="Contoh: Silakan review dokumen ini sebelum rapat besok..."
-                    rows={3}
-                    className={`w-full rounded-md border px-3 py-2 text-sm text-black focus:outline-hidden resize-none ${
-                      shareMessage.length >= 500
-                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-                    }`}
+                    rows={4}
+                    className={`w-full rounded-md border px-3 py-2 text-sm text-black focus:outline-hidden resize-none ${shareMessage.length >= 500
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                      }`}
                   />
                   <div className="flex justify-between items-center mt-1">
                     {shareMessage.length >= 500 && (
                       <p className="text-xs text-red-500 font-medium">Pesan sudah mencapai batas maksimal!</p>
                     )}
-                    <p className={`text-xs ml-auto font-medium ${
-                      shareMessage.length >= 500 ? 'text-red-500' : shareMessage.length >= 450 ? 'text-amber-500' : 'text-gray-400'
-                    }`}>
+                    <p className={`text-xs ml-auto font-medium ${shareMessage.length >= 500 ? 'text-red-500' : shareMessage.length >= 450 ? 'text-amber-500' : 'text-gray-400'
+                      }`}>
                       {shareMessage.length}/500
                     </p>
                   </div>
+                </div>
+
+                {/* Selected users count */}
+                <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                  <p className="text-xs text-gray-500">User yang dipilih:</p>
+                  <p className="text-lg font-bold text-indigo-600">
+                    {Object.values(userPermissions).filter(p => p.read || p.download).length} user
+                  </p>
                 </div>
               </div>
 
               {/* Right Content - User Permission Table */}
               <div className="w-full md:w-2/3 flex flex-col bg-gray-50">
                 <div className="p-4 border-b border-gray-200 bg-white">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Spesifik User Permission (Optional)</h4>
-                  
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Pilih User untuk Dibagikan</h4>
+
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Cari nama atau email..." 
+                      <input
+                        type="text"
+                        placeholder="Cari nama atau email..."
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
                       />
                     </div>
                     <div className="relative w-full sm:w-1/3">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowRoleDropdown(!showRoleDropdown)}
                         className="flex items-center justify-between w-full py-2 px-3 text-sm border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
@@ -983,7 +991,7 @@ export function FileList({ folderId }: FileListProps) {
                         </span>
                         <ChevronDown className="h-4 w-4 text-gray-400" />
                       </button>
-                      
+
                       {showRoleDropdown && (
                         <div className="absolute z-10 mt-1.5 w-full bg-white shadow-xl max-h-60 rounded-lg py-1 border border-gray-100 overflow-auto focus:outline-none">
                           <button
@@ -1065,11 +1073,11 @@ export function FileList({ folderId }: FileListProps) {
                   </button>
                   <button
                     onClick={handleShareSubmit}
-                    disabled={shareLoading}
+                    disabled={shareLoading || Object.values(userPermissions).filter(p => p.read || p.download).length === 0}
                     className="flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                    Simpan Perubahan
+                    {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                    Bagikan File
                   </button>
                 </div>
               </div>
@@ -1141,7 +1149,7 @@ export function FileList({ folderId }: FileListProps) {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Pesan (Opsional)</label>
               <textarea

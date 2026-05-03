@@ -23,7 +23,7 @@ export function AllFilesView() {
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
   
   const myOwnFiles = allFiles.filter(f => !f.owner_id || f.owner_id === user?.id);
-  const { files: sharedFiles, loading: sharedLoading, error: sharedError, downloadFile: downloadShared, deleteFile: deleteShared } = useSharedFiles();
+  const { files: sharedFiles, loading: sharedLoading, error: sharedError, downloadFile: downloadShared } = useSharedFiles();
   
   const [activeTab, setActiveTab] = useState<FilterTab>('my-files');
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
@@ -79,16 +79,11 @@ export function AllFilesView() {
     if (!fileToDelete) return;
     try {
       setDeleteLoading(true);
-      if (activeTab === 'shared-files') {
-        await deleteShared(fileToDelete.id);
-        toast.success(`Akses file "${fileToDelete.name}" berhasil dihapus.`);
-      } else {
-        const folderId = fileFolderMap.get(fileToDelete.id);
-        if (folderId) {
-          setSelectedFolderId(folderId);
-          await deleteMyFile(fileToDelete.id);
-          toast.success(`File "${fileToDelete.name}" berhasil dihapus.`);
-        }
+      const folderId = fileFolderMap.get(fileToDelete.id);
+      if (folderId) {
+        setSelectedFolderId(folderId);
+        await deleteMyFile(fileToDelete.id);
+        toast.success(`File "${fileToDelete.name}" berhasil dihapus.`);
       }
       setShowDeleteConfirm(false);
       setFileToDelete(null);
@@ -315,7 +310,7 @@ export function AllFilesView() {
                             <Download className="h-3.5 w-3.5" /> Download
                           </button>
                         )}
-                        {(!isShared || file.can_delete) && (
+                        {!isShared && (
                           <button
                             onClick={() => handleDelete(file)}
                             className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"

@@ -207,15 +207,15 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
   // Fetch users when component mounts (or when modal opens)
   useState(() => {
-    apiClient.getUsers()
-      .then(res => {
-        const fetchedUsers = res.data || res;
-        if (Array.isArray(fetchedUsers)) {
-          setUsers(fetchedUsers);
-        } else {
-          setUsers([]);
-        }
-      })
+      apiClient.getUsers()
+        .then(res => {
+          const fetchedUsers = (res as any).data || res;
+          if (Array.isArray(fetchedUsers)) {
+            setUsers(fetchedUsers);
+          } else {
+            setUsers([]);
+          }
+        })
       .catch(err => {
         console.error('Failed to fetch users:', err);
         setUsers([]);
@@ -286,42 +286,42 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const handleEditFolder = async (id: string, name: string) => {
     setEditFolderId(id);
     setNewFolderName(name);
-    
+
     try {
       const folder = await apiClient.getFolder(id);
-      
+
       // Reset first
       setShareWithWD1(false);
       setShareWithWD2(false);
       setShareWithWD3(false);
       setShareWithDosen(false);
       setShareWithTendik(false);
-      
+
       const newPerms: Record<string, { read: boolean, download: boolean }> = {};
 
       if (folder.permissions) {
         folder.permissions.forEach(perm => {
-           if (perm.role) {
-             const rName = perm.role.name.toLowerCase();
-             if (rName.includes('wd1') || rName.includes('wd 1') || rName.includes('wakil dekan 1')) setShareWithWD1(true);
-             if (rName.includes('wd2') || rName.includes('wd 2') || rName.includes('wakil dekan 2')) setShareWithWD2(true);
-             if (rName.includes('wd3') || rName.includes('wd 3') || rName.includes('wakil dekan 3')) setShareWithWD3(true);
-             if (rName.includes('dosen')) setShareWithDosen(true);
-             if (rName.includes('tendik')) setShareWithTendik(true);
-           }
-           if (perm.user && perm.user_id && perm.user_id !== folder.owner_id) {
-             newPerms[perm.user_id] = {
-               read: perm.can_read,
-               download: perm.can_download || false
-             };
-           }
+          if (perm.role) {
+            const rName = perm.role.name.toLowerCase();
+            if (rName.includes('wd1') || rName.includes('wd 1') || rName.includes('wakil dekan 1')) setShareWithWD1(true);
+            if (rName.includes('wd2') || rName.includes('wd 2') || rName.includes('wakil dekan 2')) setShareWithWD2(true);
+            if (rName.includes('wd3') || rName.includes('wd 3') || rName.includes('wakil dekan 3')) setShareWithWD3(true);
+            if (rName.includes('dosen')) setShareWithDosen(true);
+            if (rName.includes('tendik')) setShareWithTendik(true);
+          }
+          if (perm.user && perm.user_id && perm.user_id !== folder.owner_id) {
+            newPerms[perm.user_id] = {
+              read: perm.can_read,
+              download: perm.can_download || false
+            };
+          }
         });
       }
       setUserPermissions(newPerms);
     } catch (err) {
       console.error('Failed to fetch folder permissions', err);
     }
-    
+
     setShowCreateDialog(true);
   };
 
@@ -517,13 +517,12 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 }}
                 disabled={!hasSharedAccess}
                 title={!hasSharedAccess ? 'Tidak ada file yang dibagikan kepada Anda' : 'File yang dibagikan kepada Anda'}
-                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
-                  !hasSharedAccess
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : activeMenu === 'shared-files'
-                      ? 'bg-orange-100 text-orange-700 font-semibold'
-                      : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${!hasSharedAccess
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : activeMenu === 'shared-files'
+                    ? 'bg-orange-100 text-orange-700 font-semibold'
+                    : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <FileText className={`h-5 w-5 ${!hasSharedAccess ? 'text-gray-300' : 'text-orange-600'}`} />
                 <span>Shared Files</span>
