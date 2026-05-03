@@ -141,8 +141,8 @@ export function AllFoldersView() {
                     isSelected 
                       ? 'bg-orange-100' 
                       : isShared
-                        ? 'bg-gradient-to-br from-blue-50 to-indigo-50 group-hover:from-orange-50 group-hover:to-orange-100'
-                        : 'bg-gradient-to-br from-orange-50 to-amber-50 group-hover:from-orange-100 group-hover:to-amber-100'
+                        ? 'bg-linear-to-br from-blue-50 to-indigo-50 group-hover:from-orange-50 group-hover:to-orange-100'
+                        : 'bg-linear-to-br from-orange-50 to-amber-50 group-hover:from-orange-100 group-hover:to-amber-100'
                   }`}>
                     {hasChildren ? (
                       <FolderOpen className={`h-7 w-7 ${

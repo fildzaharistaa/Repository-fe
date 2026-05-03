@@ -204,7 +204,7 @@ export function RoleManagement() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-orange-500 to-orange-600 shadow-lg">
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -219,7 +219,7 @@ export function RoleManagement() {
                 setNewUserForm(prev => ({ ...prev, role_id: roles[0].id }));
               }
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
+            className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-orange-600 to-orange-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg"
           >
             <UserPlus className="h-4 w-4" />
             Create New User
@@ -335,7 +335,7 @@ export function RoleManagement() {
                   <tr key={user.id} className="transition-colors hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-xs font-bold text-white shadow-sm">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-orange-400 to-orange-600 text-xs font-bold text-white shadow-sm">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <span className="text-sm font-medium text-gray-900">{user.name}</span>
@@ -392,7 +392,7 @@ export function RoleManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-orange-500 to-orange-600">
                 <UserCog className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -435,7 +435,7 @@ export function RoleManagement() {
               <button
                 onClick={handleUpdateRole}
                 disabled={updating || selectedRoleId === selectedUser.role_id}
-                className="flex-1 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg disabled:opacity-50"
+                className="flex-1 rounded-xl bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-700 hover:to-orange-800 hover:shadow-lg disabled:opacity-50"
               >
                 {updating ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
@@ -548,7 +548,7 @@ export function RoleManagement() {
               <button
                 type="submit"
                 disabled={creating || !newUserForm.name || !newUserForm.email || !newUserForm.password}
-                className="flex-1 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-600 hover:to-orange-700 hover:shadow-lg disabled:opacity-50"
+                className="flex-1 rounded-xl bg-linear-to-r from-orange-600 to-orange-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-orange-600 hover:to-orange-700 hover:shadow-lg disabled:opacity-50"
               >
                 {creating ? 'Menyimpan...' : 'Tambah Pengguna'}
               </button>

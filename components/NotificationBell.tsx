@@ -332,7 +332,7 @@ export function NotificationBell() {
                             </>
                           ) : notif.request_type === 'delete_confirmation' ? (
                             <>
-                              <p className="text-sm text-gray-900 font-semibold text-red-600">
+                              <p className="text-sm text-gray-900 font-semibold">
                                 Konfirmasi Penghapusan
                               </p>
                               <p className="text-sm text-gray-900">

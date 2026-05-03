@@ -230,10 +230,18 @@ export function FileList({ folderId }: FileListProps) {
   const toggleUserPermission = (userId: string, perm: keyof { read: boolean, download: boolean }) => {
     setUserPermissions(prev => {
       const current = prev[userId] || { read: false, download: false };
-      return {
-        ...prev,
-        [userId]: { ...current, [perm]: !current[perm] }
-      };
+      const newValue = !current[perm];
+
+      if (perm === 'read' && !newValue) {
+        // Uncheck View → otomatis uncheck Download
+        return { ...prev, [userId]: { read: false, download: false } };
+      }
+      if (perm === 'download' && newValue) {
+        // Check Download → otomatis check View
+        return { ...prev, [userId]: { read: true, download: true } };
+      }
+
+      return { ...prev, [userId]: { ...current, [perm]: newValue } };
     });
   };
 
@@ -305,13 +313,13 @@ export function FileList({ folderId }: FileListProps) {
       const uPerms = Object.entries(userPermissions)
         .map(([userId, perms]) => ({
           user_id: userId,
-          can_read: perms.download,
+          can_read: perms.read,
           can_create: false,
           can_update: false,
           can_delete: false,
           can_download: perms.download
         }))
-        .filter(p => p.can_download);
+        .filter(p => p.can_read || p.can_download);
 
       if (uPerms.length === 0) {
         toast.error('Pilih minimal satu user untuk dibagikan file ini.');
@@ -1001,7 +1009,7 @@ export function FileList({ folderId }: FileListProps) {
                 <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
                   <p className="text-xs text-gray-500">User yang dipilih:</p>
                   <p className="text-lg font-bold text-indigo-600">
-                    {Object.values(userPermissions).filter(p => p.download).length} user
+                    {Object.values(userPermissions).filter(p => p.read).length} user
                   </p>
                 </div>
               </div>
@@ -1066,14 +1074,15 @@ export function FileList({ folderId }: FileListProps) {
                     <table className="w-full text-left text-sm text-gray-600">
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
-                          <th className="px-4 py-3 font-semibold">User Details (Optional)</th>
+                          <th className="px-4 py-3 font-semibold">User Details</th>
+                          <th className="px-2 py-3 font-semibold text-center w-20">VIEW</th>
                           <th className="px-2 py-3 font-semibold text-center w-24">DOWNLOAD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan={2} className="px-4 py-8 text-center text-gray-500 italic">
+                            <td colSpan={3} className="px-4 py-8 text-center text-gray-500 italic">
                               Tidak ada user yang ditemukan
                             </td>
                           </tr>
@@ -1089,6 +1098,9 @@ export function FileList({ folderId }: FileListProps) {
                                     <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
                                     <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
                                   </div>
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer" />
                                 </td>
                                 <td className="px-2 py-3 text-center">
                                   <input type="checkbox" checked={perms.download} onChange={() => toggleUserPermission(u.id, 'download')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
@@ -1111,7 +1123,7 @@ export function FileList({ folderId }: FileListProps) {
                   </button>
                   <button
                     onClick={handleShareSubmit}
-                    disabled={shareLoading || Object.values(userPermissions).filter(p => p.download).length === 0}
+                    disabled={shareLoading || Object.values(userPermissions).filter(p => p.read).length === 0}
                     className="flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
