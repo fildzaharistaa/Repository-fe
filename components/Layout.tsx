@@ -37,20 +37,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-end gap-4 px-6 py-4">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3 rounded-lg bg-gray-100 px-4 py-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="text-sm">
-                  <p className="flex items-center gap-2 font-medium text-black">
-                    {user.name}
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-black leading-tight">{user.name}</p>
                     {user.role?.name && (
-                      <span className="rounded-md bg-orange-600 px-2 py-0.5 text-sm font-medium text-white">
+                      <span className="rounded-md bg-orange-600 px-2 py-0.5 text-xs font-medium text-white">
                         {user.role.name.startsWith('wd')
                           ? user.role.name.toUpperCase()
                           : user.role.name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                       </span>
                     )}
-                  </p>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-tight">{user.email}</p>
                 </div>
               </div>
             </div>

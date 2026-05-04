@@ -21,6 +21,8 @@ type IncomingNotif = {
 type UpdateNotif = {
   id: number;
   type: 'update';
+  requesterName: string;
+  requesterEmail: string;
   resourceName: string;
   resourceType: 'folder' | 'file';
   status: string;
@@ -373,7 +375,10 @@ export function NotificationBell() {
                           ) : (
                             <>
                               <p className="text-sm text-gray-900">
-                                <span className="font-medium">{notif.requesterName}</span>  
+                                <span className="font-medium">{notif.requesterName}</span>
+                                {notif.requesterEmail && (
+                                  <span className="text-xs text-gray-400"> • {notif.requesterEmail}</span>
+                                )}
                                 <br />
                                 {' '} Requested Access to {notif.resourceType}{' '}
                                 <br />
@@ -447,6 +452,14 @@ export function NotificationBell() {
                               </span>
                             )}
                           </p>
+                          {notif.requesterName && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              <span className="font-medium text-gray-700">{notif.requesterName}</span>
+                              {notif.requesterEmail && (
+                                <span className="text-gray-400"> • {notif.requesterEmail}</span>
+                              )}
+                            </p>
+                          )}
                           <p className="text-xs text-gray-400 mt-0.5">{timeAgo(notif.createdAt)}</p>
 
                           {/* Show owner's response message if present */}

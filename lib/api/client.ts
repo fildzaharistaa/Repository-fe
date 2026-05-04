@@ -578,6 +578,8 @@ class ApiClient {
     updates: Array<{
       id: number;
       type: 'update';
+      requesterName: string;
+      requesterEmail: string;
       resourceName: string;
       resourceType: 'folder' | 'file';
       status: string;
