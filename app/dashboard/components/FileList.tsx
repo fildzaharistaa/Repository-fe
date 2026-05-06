@@ -34,7 +34,7 @@ export function FileList({ folderId }: FileListProps) {
   const isDosenOrTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
   const hasEditRights = isOwnerOrAdmin || isDosenOrTendik;
 
-  useEffect(() => {
+  const fetchFolderInfo = () => {
     if (folderId) {
       apiClient.getFolder(folderId)
         .then(folder => {
@@ -81,7 +81,12 @@ export function FileList({ folderId }: FileListProps) {
       setIsOwnerOrAdmin(true);
       setCanDownload(true);
     }
+  };
+
+  useEffect(() => {
+    fetchFolderInfo();
   }, [folderId, user]);
+
   const [showQuickView, setShowQuickView] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -1225,6 +1230,26 @@ export function FileList({ folderId }: FileListProps) {
                 {requestLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Kirim Permintaan'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Success Modal */}
+      {successMessage && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
+              <Check className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              {successMessage}
+            </p>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-orange-700 hover:shadow-lg transition-all"
+            >
+              Tutup Jendela
+            </button>
           </div>
         </div>
       )}
