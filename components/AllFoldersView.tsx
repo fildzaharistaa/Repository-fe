@@ -5,6 +5,7 @@ import { Folder, FolderOpen, Share2, User, Mail } from 'lucide-react';
 import { useFolders } from '@/hooks/useFolders';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useFolderContext } from '@/context/FolderContext';
+import { useAuthContext } from '@/context/AuthContext';
 import type { FolderTreeNode } from '@/types';
 
 type FilterTab = 'my-folders' | 'shared-folders';
@@ -13,7 +14,8 @@ export function AllFoldersView() {
   const { folders, loading, error } = useFolders(false);
   const { folders: sharedFolders, loading: sharedLoading, error: sharedError } = useSharedFolders();
   const { selectedFolderId, setSelectedFolderId } = useFolderContext();
-  const [activeTab, setActiveTab] = useState<FilterTab>('my-folders');
+  const { canCreateFolder } = useAuthContext();
+  const [activeTab, setActiveTab] = useState<FilterTab>(canCreateFolder ? 'my-folders' : 'shared-folders');
   
   // Only show parent (root) folders — subfolders appear when user clicks into a parent
   const parentFolders = folders;
@@ -56,24 +58,26 @@ export function AllFoldersView() {
 
       {/* Filter Tabs */}
       <div className="flex gap-1 rounded-xl bg-gray-100 p-1 w-fit">
-        <button
-          onClick={() => setActiveTab('my-folders')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            activeTab === 'my-folders'
-              ? 'bg-white text-orange-700 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Folder className="h-4 w-4" />
-          My Folders
-          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-            activeTab === 'my-folders'
-              ? 'bg-orange-100 text-orange-700'
-              : 'bg-gray-200 text-gray-500'
-          }`}>
-            {parentFolders.length}
-          </span>
-        </button>
+        {canCreateFolder && (
+          <button
+            onClick={() => setActiveTab('my-folders')}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+              activeTab === 'my-folders'
+                ? 'bg-white text-orange-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Folder className="h-4 w-4" />
+            My Folders
+            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+              activeTab === 'my-folders'
+                ? 'bg-orange-100 text-orange-700'
+                : 'bg-gray-200 text-gray-500'
+            }`}>
+              {parentFolders.length}
+            </span>
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('shared-folders')}
           className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all ${
