@@ -109,38 +109,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <GlobalSearch />
           </div>
 
-          <div className="flex items-center justify-end gap-4 px-6 py-4">
+          <div className="flex items-center gap-3 px-4 py-3">
             <RoleSwitcher />
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3 rounded-lg bg-gray-100 px-4 py-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-black leading-tight">{user.name}</p>
-                    {(activeRole?.name || user.role?.name) && (
-                      <span
-                        className="rounded-md px-2 py-0.5 text-xs font-medium text-white"
-                        style={{ backgroundColor: activeRole?.color || '#ea580c' }}
-                      >
-                        {activeRole?.name || user.role?.name}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 leading-tight">{user.email}</p>
-                </div>
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-gray-200" />
+
+            {/* User info — compact, no role badge (already in RoleSwitcher) */}
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-600 text-sm font-semibold text-white">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="hidden sm:block text-sm leading-tight">
+                <p className="font-semibold text-gray-900">{user.name}</p>
+                <p className="text-xs text-gray-400">{user.email}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg bg-gray-100 px-2 py-1"><NotificationBell /></div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { logout(); router.push('/login'); }}
-                className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-              >
-                Logout
-              </button>
-            </div>
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-gray-200" />
+
+            <NotificationBell />
+
+            <button
+              onClick={() => { logout(); router.push('/login'); }}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+            >
+              Logout
+            </button>
           </div>
         </header>
 

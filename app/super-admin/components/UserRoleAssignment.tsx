@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   CheckCircle2,
+  Edit2,
   Loader2,
   Pause,
   Play,
@@ -67,7 +68,12 @@ export function UserRoleAssignment() {
   const [addRoleId, setAddRoleId] = useState('');
   const [addPrimary, setAddPrimary] = useState(false);
   const [addExpires, setAddExpires] = useState('');
+  const [addDescription, setAddDescription] = useState('');
   const [addFormOpen, setAddFormOpen] = useState(false);
+
+  // Inline edit description per assignment
+  const [editingAssignId, setEditingAssignId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState('');
 
   // Suspend prompt
   const [suspendId, setSuspendId] = useState<string | null>(null);
@@ -178,12 +184,14 @@ export function UserRoleAssignment() {
         roleId: addRoleId,
         isPrimary: addPrimary,
         expiresAt: addExpires || undefined,
+        description: addDescription || undefined,
       });
       toast.success('Role di-assign');
       setAddFormOpen(false);
       setAddRoleId('');
       setAddPrimary(false);
       setAddExpires('');
+      setAddDescription('');
       await reloadPanel();
     } catch (e: any) {
       toast.error(e?.message || 'Gagal assign');
@@ -225,6 +233,19 @@ export function UserRoleAssignment() {
     try {
       await apiClient.saRemoveRoleAssignment(panelUser.id, a.role_id);
       toast.success('Assignment dihapus');
+      await reloadPanel();
+    } catch (e: any) { toast.error(e?.message || 'Gagal'); }
+  };
+
+  const handleSaveDescription = async (a: UserRole) => {
+    if (!panelUser) return;
+    try {
+      await apiClient.saAssignRole(panelUser.id, {
+        roleId: a.role_id,
+        description: editDescription || undefined,
+      });
+      toast.success('Keterangan disimpan');
+      setEditingAssignId(null);
       await reloadPanel();
     } catch (e: any) { toast.error(e?.message || 'Gagal'); }
   };
@@ -507,8 +528,34 @@ export function UserRoleAssignment() {
                           </span>
                         )}
                       </div>
+                      {a.description && editingAssignId !== a.id && (
+                        <p className="mt-1 pl-5 text-xs text-blue-500 italic">↪ {a.description}</p>
+                      )}
                       {a.suspended_reason && (
                         <p className="mt-1 pl-5 text-xs italic text-red-500">↪ {a.suspended_reason}</p>
+                      )}
+                      {/* Inline edit description form */}
+                      {editingAssignId === a.id && (
+                        <div className="mt-2 flex items-center gap-2 pl-5">
+                          <input
+                            type="text"
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            maxLength={200}
+                            autoFocus
+                            className="flex-1 rounded-md border border-blue-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Keterangan (misal: S1 Sistem Informasi)"
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveDescription(a); if (e.key === 'Escape') setEditingAssignId(null); }}
+                          />
+                          <button onClick={() => handleSaveDescription(a)}
+                            className="rounded px-2 py-1 text-xs bg-blue-600 text-white hover:bg-blue-700">
+                            Simpan
+                          </button>
+                          <button onClick={() => setEditingAssignId(null)}
+                            className="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100">
+                            Batal
+                          </button>
+                        </div>
                       )}
                       <div className="mt-2 flex items-center gap-1.5 pl-5">
                         {a.status === 'ACTIVE' && !a.is_primary && (
@@ -529,6 +576,11 @@ export function UserRoleAssignment() {
                             <Play className="h-3.5 w-3.5" /> Aktifkan
                           </button>
                         )}
+                        <button
+                          onClick={() => { setEditingAssignId(a.id); setEditDescription(a.description || ''); }}
+                          className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-blue-600 hover:bg-blue-50">
+                          <Edit2 className="h-3.5 w-3.5" /> Edit
+                        </button>
                         <button onClick={() => handleRemove(a)}
                           className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100">
                           <Trash2 className="h-3.5 w-3.5" /> Hapus
@@ -575,6 +627,16 @@ export function UserRoleAssignment() {
                           placeholder="Expires (opsional)"
                         />
                       </div>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={addDescription}
+                        onChange={(e) => setAddDescription(e.target.value)}
+                        maxLength={200}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs"
+                        placeholder="Keterangan (misal: S1 Sistem Informasi, Periode 2024)"
+                      />
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button onClick={handleAdd} disabled={!addRoleId}

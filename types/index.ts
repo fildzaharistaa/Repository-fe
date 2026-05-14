@@ -36,6 +36,7 @@ export interface UserRole {
   role?: Role;
   is_primary: boolean;
   status: UserRoleStatus;
+  description?: string | null;
   suspended_reason: string | null;
   expires_at: string | null;
   assigned_at: string;
@@ -67,6 +68,7 @@ export interface AssignRolePayload {
   roleId: string;
   isPrimary?: boolean;
   expiresAt?: string;
+  description?: string;
 }
 
 export interface BulkAssignPayload {

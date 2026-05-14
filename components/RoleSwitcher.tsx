@@ -104,10 +104,15 @@ export function RoleSwitcher() {
                   >
                     <span className="flex items-center gap-2">
                       <span
-                        className="inline-block h-3 w-3 rounded-full"
+                        className="inline-block h-3 w-3 shrink-0 rounded-full"
                         style={{ backgroundColor: a.role?.color || '#94a3b8' }}
                       />
-                      <span className="font-medium text-gray-800">{a.role?.name}</span>
+                      <span>
+                        <span className="block font-medium text-gray-800">{a.role?.name}</span>
+                        {a.description && (
+                          <span className="block text-[10px] text-gray-400 leading-tight">{a.description}</span>
+                        )}
+                      </span>
                       {a.is_primary && (
                         <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold text-amber-700">
                           PRIMARY
