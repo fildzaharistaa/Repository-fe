@@ -7,6 +7,14 @@ import type {
   FolderPermission,
   PaginatedResponse,
   LoginResponse,
+  Permission,
+  UserRole,
+  AssignRolePayload,
+  BulkAssignPayload,
+  BulkAssignResult,
+  MyRolesResponse,
+  SwitchRoleResponse,
+  PermissionVisibility,
 } from '@/types';
 import { apiLogger } from './logger';
 
@@ -651,6 +659,246 @@ class ApiClient {
       method: 'PATCH',
       body: JSON.stringify({ roleIds, maxDepth }),
     });
+  }
+
+  // ========== Phase 1 RBAC: Self-service multi-role ==========
+  async getMyRoles(): Promise<MyRolesResponse> {
+    return this.request<MyRolesResponse>('/users/my-roles');
+  }
+
+  async switchActiveRole(roleId: string): Promise<SwitchRoleResponse> {
+    const res = await this.request<SwitchRoleResponse>('/users/switch-role', {
+      method: 'POST',
+      body: JSON.stringify({ roleId }),
+    });
+    if (typeof window !== 'undefined' && res?.access_token) {
+      localStorage.setItem('token', res.access_token);
+    }
+    return res;
+  }
+
+  // ========== Phase 1 RBAC: Super-admin roles ==========
+  async saCreateRole(payload: {
+    name: string;
+    description?: string;
+    is_admin?: boolean;
+    is_active?: boolean;
+    hierarchy_level?: number;
+    category?: string;
+    color?: string;
+    max_folder_depth?: number;
+  }): Promise<Role> {
+    return this.request<Role>('/super-admin/roles', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saListRoles(opts?: { includeInactive?: boolean; category?: string }): Promise<Role[]> {
+    const qs = new URLSearchParams();
+    if (opts?.includeInactive) qs.set('include_inactive', 'true');
+    if (opts?.category) qs.set('category', opts.category);
+    const q = qs.toString() ? `?${qs}` : '';
+    return this.request<Role[]>(`/super-admin/roles${q}`);
+  }
+
+  async saGetRole(id: string): Promise<Role> {
+    return this.request<Role>(`/super-admin/roles/${id}`);
+  }
+
+  async saUpdateRole(
+    id: string,
+    payload: Partial<{
+      name: string;
+      description: string;
+      is_admin: boolean;
+      is_active: boolean;
+      hierarchy_level: number;
+      category: string;
+      color: string;
+      max_folder_depth: number;
+    }>,
+  ): Promise<Role> {
+    return this.request<Role>(`/super-admin/roles/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saToggleRoleActive(id: string): Promise<Role> {
+    return this.request<Role>(`/super-admin/roles/${id}/toggle-active`, {
+      method: 'PATCH',
+    });
+  }
+
+  async saDeleteRole(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/super-admin/roles/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async saCloneRole(
+    id: string,
+    payload: { newName: string; description?: string; copyPermissions?: boolean },
+  ): Promise<Role> {
+    return this.request<Role>(`/super-admin/roles/${id}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // ========== Phase 1 RBAC: Super-admin permissions ==========
+  async saCreatePermission(payload: {
+    slug: string;
+    module: string;
+    action: string;
+    submodule?: string;
+    name: string;
+    description?: string;
+    category?: string;
+    visibility?: PermissionVisibility;
+    is_active?: boolean;
+  }): Promise<Permission> {
+    return this.request<Permission>('/super-admin/permissions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saListPermissions(opts?: {
+    module?: string;
+    category?: string;
+    visibility?: PermissionVisibility;
+  }): Promise<Permission[]> {
+    const qs = new URLSearchParams();
+    if (opts?.module) qs.set('module', opts.module);
+    if (opts?.category) qs.set('category', opts.category);
+    if (opts?.visibility) qs.set('visibility', opts.visibility);
+    const q = qs.toString() ? `?${qs}` : '';
+    return this.request<Permission[]>(`/super-admin/permissions${q}`);
+  }
+
+  async saGetPermissionsGrouped(): Promise<Record<string, Permission[]>> {
+    return this.request<Record<string, Permission[]>>('/super-admin/permissions/grouped');
+  }
+
+  async saUpdatePermission(
+    id: string,
+    payload: Partial<{
+      name: string;
+      description: string;
+      category: string;
+      visibility: PermissionVisibility;
+      is_active: boolean;
+    }>,
+  ): Promise<Permission> {
+    return this.request<Permission>(`/super-admin/permissions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saDeletePermission(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/super-admin/permissions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== Phase 1 RBAC: Role ↔ Permission ==========
+  async saListRolePermissions(roleId: string): Promise<Permission[]> {
+    return this.request<Permission[]>(`/super-admin/roles/${roleId}/permissions`);
+  }
+
+  async saAddRolePermissions(roleId: string, permissionIds: string[]): Promise<Permission[]> {
+    return this.request<Permission[]>(`/super-admin/roles/${roleId}/permissions`, {
+      method: 'POST',
+      body: JSON.stringify({ permissionIds }),
+    });
+  }
+
+  async saReplaceRolePermissions(roleId: string, permissionIds: string[]): Promise<Permission[]> {
+    return this.request<Permission[]>(`/super-admin/roles/${roleId}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permissionIds }),
+    });
+  }
+
+  async saRemoveRolePermission(roleId: string, permissionId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(
+      `/super-admin/roles/${roleId}/permissions/${permissionId}`,
+      { method: 'DELETE' },
+    );
+  }
+
+  async saCopyRolePermissions(
+    roleId: string,
+    sourceRoleId: string,
+    mode: 'merge' | 'replace' = 'merge',
+  ): Promise<Permission[]> {
+    return this.request<Permission[]>(`/super-admin/roles/${roleId}/copy-permissions`, {
+      method: 'POST',
+      body: JSON.stringify({ sourceRoleId, mode }),
+    });
+  }
+
+  // ========== Phase 1 RBAC: User ↔ Role ==========
+  async saListUserRoles(userId: string): Promise<UserRole[]> {
+    return this.request<UserRole[]>(`/super-admin/users/${userId}/roles`);
+  }
+
+  async saAssignRole(userId: string, payload: AssignRolePayload): Promise<UserRole> {
+    return this.request<UserRole>(`/super-admin/users/${userId}/roles`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saBulkAssignRole(payload: BulkAssignPayload): Promise<BulkAssignResult> {
+    return this.request<BulkAssignResult>('/super-admin/user-roles/bulk-assign', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async saRemoveRoleAssignment(userId: string, roleId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/super-admin/users/${userId}/roles/${roleId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async saSetPrimaryRole(userId: string, roleId: string): Promise<UserRole> {
+    return this.request<UserRole>(
+      `/super-admin/users/${userId}/roles/${roleId}/set-primary`,
+      { method: 'PATCH' },
+    );
+  }
+
+  async saSuspendAssignment(assignmentId: string, reason?: string): Promise<UserRole> {
+    return this.request<UserRole>(`/super-admin/user-roles/${assignmentId}/suspend`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async saReactivateAssignment(assignmentId: string): Promise<UserRole> {
+    return this.request<UserRole>(`/super-admin/user-roles/${assignmentId}/reactivate`, {
+      method: 'PATCH',
+    });
+  }
+
+  async saRequestReactivation(assignmentId: string): Promise<UserRole> {
+    return this.request<UserRole>(
+      `/super-admin/user-roles/${assignmentId}/request-reactivation`,
+      { method: 'PATCH' },
+    );
+  }
+
+  async saGetPendingReactivations(): Promise<UserRole[]> {
+    return this.request<UserRole[]>('/super-admin/user-roles/pending-reactivation');
+  }
+
+  async saGetAllActiveUserRoles(): Promise<UserRole[]> {
+    return this.request<UserRole[]>('/super-admin/user-roles/active-summary');
   }
 }
 

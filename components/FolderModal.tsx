@@ -5,6 +5,7 @@ import { X, Search, ChevronDown, Check } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { useAuthContext } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
+import type { Role } from '@/types';
 
 interface FolderModalProps {
   isOpen: boolean;
@@ -25,25 +26,32 @@ export function FolderModal({
   onSuccess,
   refreshFolders
 }: FolderModalProps) {
-  const { user } = useAuthContext();
-  const roleName = (typeof user?.role === 'object' ? user?.role?.name : user?.role)?.toLowerCase() || '';
-  const isWD1 = roleName === 'wd1' || roleName.includes('wakil dekan 1');
-  const isWD2 = roleName === 'wd2' || roleName.includes('wakil dekan 2');
-  const isWD3 = roleName === 'wd3' || roleName.includes('wakil dekan 3');
+  const { user, activeRole } = useAuthContext();
 
   const [folderName, setFolderName] = useState(initialFolderName);
-  const [shareWithWD1, setShareWithWD1] = useState(isWD1);
-  const [shareWithWD2, setShareWithWD2] = useState(isWD2);
-  const [shareWithWD3, setShareWithWD3] = useState(isWD3);
-  const [shareWithDosen, setShareWithDosen] = useState(false);
-  const [shareWithTendik, setShareWithTendik] = useState(false);
-  
+
+  // Dynamic role sharing
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
+
+  // Specific user permissions
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [userPermissions, setUserPermissions] = useState<Record<string, { read: boolean, download: boolean }>>({});
   const [loading, setLoading] = useState(false);
+
+  // Load roles once
+  useEffect(() => {
+    apiClient.getRoles()
+      .then((roles) => {
+        // Filter out system admin roles from sharing (they already have full access)
+        const filtered = roles.filter((r) => !r.is_admin);
+        setAllRoles(filtered);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -52,12 +60,7 @@ export function FolderModal({
       if (editFolderId) {
         fetchFolderDetails(editFolderId);
       } else {
-        // Reset for new folder
-        setShareWithWD1(isWD1);
-        setShareWithWD2(isWD2);
-        setShareWithWD3(isWD3);
-        setShareWithDosen(false);
-        setShareWithTendik(false);
+        setSelectedRoleIds(new Set());
         setUserPermissions({});
       }
     }
@@ -80,24 +83,13 @@ export function FolderModal({
       const folder = await apiClient.getFolder(id);
       setFolderName(folder.name);
 
-      // Reset first
-      setShareWithWD1(false);
-      setShareWithWD2(false);
-      setShareWithWD3(false);
-      setShareWithDosen(false);
-      setShareWithTendik(false);
-
       const newPerms: Record<string, { read: boolean, download: boolean }> = {};
+      const newSelectedIds = new Set<string>();
 
       if (folder.permissions) {
         folder.permissions.forEach((perm: any) => {
-          if (perm.role) {
-            const rName = perm.role.name.toLowerCase();
-            if (rName.includes('wd1') || rName.includes('wd 1') || rName.includes('wakil dekan 1')) setShareWithWD1(true);
-            if (rName.includes('wd2') || rName.includes('wd 2') || rName.includes('wakil dekan 2')) setShareWithWD2(true);
-            if (rName.includes('wd3') || rName.includes('wd 3') || rName.includes('wakil dekan 3')) setShareWithWD3(true);
-            if (rName.includes('dosen')) setShareWithDosen(true);
-            if (rName.includes('tendik')) setShareWithTendik(true);
+          if (perm.role && perm.role_id) {
+            newSelectedIds.add(perm.role_id);
           }
           if (perm.user && perm.user_id && perm.user_id !== folder.owner_id) {
             newPerms[perm.user_id] = {
@@ -107,10 +99,20 @@ export function FolderModal({
           }
         });
       }
+      setSelectedRoleIds(newSelectedIds);
       setUserPermissions(newPerms);
     } catch (err) {
       console.error('Failed to fetch folder permissions', err);
     }
+  };
+
+  const toggleRoleId = (roleId: string) => {
+    setSelectedRoleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(roleId)) next.delete(roleId);
+      else next.add(roleId);
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -118,12 +120,11 @@ export function FolderModal({
 
     try {
       setLoading(true);
-      const shareRoles: string[] = [];
-      if (shareWithWD1) shareRoles.push('Wakil Dekan 1');
-      if (shareWithWD2) shareRoles.push('Wakil Dekan 2');
-      if (shareWithWD3) shareRoles.push('Wakil Dekan 3');
-      if (shareWithDosen) shareRoles.push('Dosen');
-      if (shareWithTendik) shareRoles.push('Tendik');
+
+      // Map selected role IDs → names (BE expects names)
+      const shareRoles = allRoles
+        .filter((r) => selectedRoleIds.has(r.id))
+        .map((r) => r.name);
 
       const uPerms = Object.entries(userPermissions)
         .map(([userId, perms]) => ({
@@ -165,11 +166,6 @@ export function FolderModal({
   const formatRoleName = (raw: string) => {
     if (!raw) return 'User';
     const norm = raw.toLowerCase().trim();
-    if (norm === 'wd1' || norm === 'wd 1') return 'Wakil Dekan 1';
-    if (norm === 'wd2' || norm === 'wd 2') return 'Wakil Dekan 2';
-    if (norm === 'wd3' || norm === 'wd 3') return 'Wakil Dekan 3';
-    if (norm === 'dosen') return 'Dosen';
-    if (norm === 'tendik') return 'Tendik';
     if (norm.includes('super')) return 'Super Admin';
     if (norm === 'admin') return 'Admin';
     return raw.charAt(0).toUpperCase() + raw.slice(1);
@@ -195,17 +191,14 @@ export function FolderModal({
       const current = prev[userId] || { read: false, download: false };
       const newVal = !current[perm];
       if (perm === 'download') {
-        return {
-          ...prev,
-          [userId]: { read: newVal, download: newVal }
-        };
+        return { ...prev, [userId]: { read: newVal, download: newVal } };
       }
-      return {
-        ...prev,
-        [userId]: { ...current, [perm]: newVal }
-      };
+      return { ...prev, [userId]: { ...current, [perm]: newVal } };
     });
   };
+
+  // ID of the current user's active role — auto-selected but not forced
+  const myActiveRoleId = activeRole?.id ?? user?.role_id;
 
   if (!isOpen) return null;
 
@@ -222,6 +215,7 @@ export function FolderModal({
         </div>
 
         <div className="flex flex-col md:flex-row h-[500px]">
+          {/* Left panel: folder name + role sharing */}
           <div className="w-full md:w-1/3 border-r border-gray-100 bg-white p-6 overflow-y-auto">
             <div className="mb-6">
               <label className="mb-1 block text-sm font-semibold text-gray-700">Nama Folder</label>
@@ -235,32 +229,44 @@ export function FolderModal({
               />
             </div>
 
-            <div className="mb-6">
-              <label className="mb-2 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
-              <p className="text-xs text-gray-500 mb-3">Pilih role untuk membagikan akses keseluruhan ke folder ini.</p>
-              <div className="space-y-2">
-                {[
-                  { id: 'wd1', label: 'Wakil Dekan 1', checked: shareWithWD1, set: setShareWithWD1, disabled: isWD1 },
-                  { id: 'wd2', label: 'Wakil Dekan 2', checked: shareWithWD2, set: setShareWithWD2, disabled: isWD2 },
-                  { id: 'wd3', label: 'Wakil Dekan 3', checked: shareWithWD3, set: setShareWithWD3, disabled: isWD3 },
-                  { id: 'dosen', label: 'Dosen FIK', checked: shareWithDosen, set: setShareWithDosen, disabled: false },
-                  { id: 'tendik', label: 'Tenaga Kependidikan', checked: shareWithTendik, set: setShareWithTendik, disabled: false },
-                ].map(role => (
-                  <label key={role.id} className={`flex items-center gap-3 p-2 rounded-md border text-sm ${role.checked ? 'border-orange-200 bg-orange-50' : 'border-gray-200 hover:bg-gray-50'} ${role.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                    <input
-                      type="checkbox"
-                      checked={role.checked}
-                      onChange={(e) => role.set(e.target.checked)}
-                      disabled={role.disabled}
-                      className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                    />
-                    <span className="font-medium text-gray-700">{role.label}</span>
-                  </label>
-                ))}
-              </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
+              <p className="text-xs text-gray-500 mb-3">Pilih role yang bisa mengakses folder ini.</p>
+              {allRoles.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Memuat role...</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {allRoles.map((role) => {
+                    const isChecked = selectedRoleIds.has(role.id);
+                    const isMyRole = role.id === myActiveRoleId;
+                    return (
+                      <label
+                        key={role.id}
+                        className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors ${
+                          isChecked
+                            ? 'border-orange-200 bg-orange-50'
+                            : 'border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleRoleId(role.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="flex-1 font-medium text-gray-700">{role.name}</span>
+                        {isMyRole && (
+                          <span className="text-[10px] font-semibold text-orange-500">(Saya)</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Right panel: specific user permissions */}
           <div className="w-full md:w-2/3 flex flex-col bg-gray-50">
             <div className="p-4 border-b border-gray-200 bg-white">
               <h4 className="text-sm font-semibold text-gray-800 mb-3">Spesifik User Permission (Optional)</h4>
@@ -290,7 +296,7 @@ export function FolderModal({
                         onClick={() => { setSelectedRoleFilter(null); setShowRoleDropdown(false); }}
                         className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${!selectedRoleFilter ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
                       >
-                        <span className="text-sm font-semibold selection:bg-transparent">Semua Role</span>
+                        <span className="text-sm font-semibold">Semua Role</span>
                         <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-[10px] font-bold">{users.length}</span>
                       </button>
                       {Object.keys(roleStats).map(role => (
@@ -299,7 +305,7 @@ export function FolderModal({
                           onClick={() => { setSelectedRoleFilter(role); setShowRoleDropdown(false); }}
                           className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors ${role === selectedRoleFilter ? 'bg-orange-50 text-orange-700' : 'text-gray-600 hover:bg-gray-50'}`}
                         >
-                          <span className="text-sm font-semibold truncate pr-2 selection:bg-transparent">{role}</span>
+                          <span className="text-sm font-semibold truncate pr-2">{role}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${role === selectedRoleFilter ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
                             {roleStats[role]}
                           </span>

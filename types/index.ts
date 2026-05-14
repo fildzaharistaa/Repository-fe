@@ -12,11 +12,85 @@ export interface User {
 
 export interface Role {
   id: string;
-  name: 'admin' | 'super admin' | 'wd1' | 'wd2' | 'wd3' | 'dosen' | 'tendik';
-  description: string;
+  name: string;
+  description: string | null;
   max_folder_depth?: number | null;
+  is_admin?: boolean;
+  is_active?: boolean;
+  is_system?: boolean;
+  hierarchy_level?: number;
+  category?: string | null;
+  color?: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
+}
+
+export type UserRoleStatus = 'ACTIVE' | 'SUSPENDED' | 'PENDING_REACTIVATION';
+export type PermissionVisibility = 'internal' | 'public' | 'hidden';
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role_id: string;
+  role?: Role;
+  is_primary: boolean;
+  status: UserRoleStatus;
+  suspended_reason: string | null;
+  expires_at: string | null;
+  assigned_at: string;
+  suspended_at: string | null;
+  reactivated_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string | null;
+  user?: { id: string; name: string; email: string };
+}
+
+export interface Permission {
+  id: string;
+  slug: string;
+  module: string;
+  action: string;
+  submodule: string | null;
+  name: string;
+  description: string | null;
+  category: string | null;
+  visibility: PermissionVisibility;
+  is_system: boolean;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AssignRolePayload {
+  roleId: string;
+  isPrimary?: boolean;
+  expiresAt?: string;
+}
+
+export interface BulkAssignPayload {
+  userIds: string[];
+  roleId: string;
+  isPrimary?: boolean;
+  expiresAt?: string;
+}
+
+export interface SwitchRoleResponse {
+  access_token: string;
+  active_role: Role;
+  active_role_id: string;
+}
+
+export interface MyRolesResponse {
+  active_role_id: string | null;
+  assignments: UserRole[];
+}
+
+export interface BulkAssignResult {
+  roleId: string;
+  total: number;
+  results: { userId: string; ok: boolean; error?: string }[];
 }
 
 // Folder Types

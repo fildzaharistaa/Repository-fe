@@ -5,6 +5,7 @@ import { useFolderContext } from '@/context/FolderContext';
 import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/context/AuthContext';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
@@ -27,12 +28,16 @@ export function FileList({ folderId }: FileListProps) {
   const { setSelectedFolderId } = useFolderContext();
   const [subfolders, setSubfolders] = useState<any[]>([]);
   const { user } = useAuth();
+  const { isAdmin, hasPermission } = useAuthContext();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
   const [canDownload, setCanDownload] = useState(true);
   const [folderPermissions, setFolderPermissions] = useState<any[]>([]);
 
-  const isDosenOrTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
-  const hasEditRights = isOwnerOrAdmin || isDosenOrTendik;
+  // Edit rights now come from dynamic permission slugs; legacy 'dosen/tendik' fallback retained for backward compat.
+  const canUpload = hasPermission('file.upload');
+  const canDelete = hasPermission('file.delete');
+  const legacyDosenTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
+  const hasEditRights = isOwnerOrAdmin || canUpload || canDelete || legacyDosenTendik;
 
   const fetchFolderInfo = () => {
     if (folderId) {
@@ -41,10 +46,7 @@ export function FileList({ folderId }: FileListProps) {
           setFolderName(folder.name);
           setParentFolderId(folder.parent_id);
           const ownerId = folder.owner?.id || (folder as any).owner_id;
-          const ownerOrAdmin = 
-            user?.id === ownerId ||
-            user?.role?.name === 'admin' ||
-            user?.role?.name === 'super admin';
+          const ownerOrAdmin = user?.id === ownerId || isAdmin;
           setIsOwnerOrAdmin(ownerOrAdmin);
 
           // Check if current user has download permission for this folder
@@ -177,7 +179,7 @@ export function FileList({ folderId }: FileListProps) {
   }, [showShareModal, fileToShare]);
 
   const groupedFiles = useMemo(() => {
-    if (!isOwnerOrAdmin || isDosenOrTendik) return null;
+    if (!isOwnerOrAdmin || legacyDosenTendik) return null;
 
     const groups: Record<string, { user: any, items: FileEntity[] }> = {};
     files.forEach(file => {
@@ -200,7 +202,7 @@ export function FileList({ folderId }: FileListProps) {
       groups[keyStr].items.push(file);
     });
     return groups;
-  }, [files, isOwnerOrAdmin, isDosenOrTendik]);
+  }, [files, isOwnerOrAdmin, legacyDosenTendik]);
 
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
 

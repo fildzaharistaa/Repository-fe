@@ -6,9 +6,10 @@ import { useFolderContext } from '@/context/FolderContext';
 import { FolderTree } from '@/components/FolderTree';
 import { NotificationBell } from '@/components/NotificationBell';
 import { GlobalSearch } from '@/components/GlobalSearch';
+import { RoleSwitcher } from '@/components/RoleSwitcher';
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuthContext();
+  const { user, logout, activeRole } = useAuthContext();
   const router = useRouter();
   const { selectedFolderId, setSelectedFolderId } = useFolderContext();
 
@@ -35,6 +36,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center justify-end gap-4 px-6 py-4">
+            <RoleSwitcher />
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3 rounded-lg bg-gray-100 px-4 py-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
@@ -43,11 +45,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <div className="text-sm">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-black leading-tight">{user.name}</p>
-                    {user.role?.name && (
-                      <span className="rounded-md bg-orange-600 px-2 py-0.5 text-xs font-medium text-white">
-                        {user.role.name.startsWith('wd')
-                          ? user.role.name.toUpperCase()
-                          : user.role.name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    {(activeRole?.name || user.role?.name) && (
+                      <span
+                        className="rounded-md px-2 py-0.5 text-xs font-medium text-white"
+                        style={{ backgroundColor: activeRole?.color || '#ea580c' }}
+                      >
+                        {activeRole?.name || user.role?.name}
                       </span>
                     )}
                   </div>

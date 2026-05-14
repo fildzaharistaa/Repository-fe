@@ -50,6 +50,7 @@ export function useAuth() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('active_role_id');
     }
     setUser(null);
   }, []);
