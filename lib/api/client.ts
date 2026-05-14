@@ -666,6 +666,10 @@ class ApiClient {
     return this.request<MyRolesResponse>('/users/my-roles');
   }
 
+  async getMyPermissions(): Promise<{ permissions: string[]; isWildcard: boolean }> {
+    return this.request('/users/my-permissions');
+  }
+
   async switchActiveRole(roleId: string): Promise<SwitchRoleResponse> {
     const res = await this.request<SwitchRoleResponse>('/users/switch-role', {
       method: 'POST',

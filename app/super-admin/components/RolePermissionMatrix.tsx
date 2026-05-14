@@ -134,7 +134,7 @@ export function RolePermissionMatrix() {
           apiClient.saListRoles({ includeInactive: true }),
           apiClient.saListPermissions(),
         ]);
-        setRoles(r);
+        setRoles([...r].sort((a, b) => (b.is_admin ? 1 : 0) - (a.is_admin ? 1 : 0) || a.name.localeCompare(b.name)));
         setAllPerms(p);
         if (r.length && !selectedRoleId) setSelectedRoleId(r[0].id);
       } catch (e: any) {

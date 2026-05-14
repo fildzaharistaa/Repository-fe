@@ -25,6 +25,7 @@ interface AuthContextType {
   activeRoleId: string | null;
   assignments: UserRole[];
   loadingRoles: boolean;
+  roleVersion: number;
   switchRole: (roleId: string) => Promise<void>;
   refreshRoles: () => Promise<void>;
 
@@ -43,6 +44,7 @@ interface AuthContextType {
   isTendik: boolean;
   /** @deprecated; derived from permission 'folder.create' */
   canCreateFolder: boolean;
+  canCreateSubfolder: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [assignments, setAssignments] = useState<UserRole[]>([]);
   const [activeRoleId, setActiveRoleId] = useState<string | null>(null);
   const [loadingRoles, setLoadingRoles] = useState<boolean>(false);
+  const [roleVersion, setRoleVersion] = useState<number>(0);
   const [permissionSlugs, setPermissionSlugs] = useState<Set<string>>(new Set());
   const permCacheRef = useRef<Map<string, Set<string>>>(new Map());
 
@@ -76,12 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cached = permCacheRef.current.get(roleId);
     if (cached) return cached;
     try {
-      const perms: Permission[] = await apiClient.saListRolePermissions(roleId);
-      const set = new Set(perms.map((p) => p.slug));
+      // Use user-accessible endpoint — no role.view permission required
+      const { permissions, isWildcard } = await apiClient.getMyPermissions();
+      if (isWildcard) return new Set(['*']);
+      const set = new Set(permissions);
       permCacheRef.current.set(roleId, set);
       return set;
-    } catch (e) {
-      // Backend may 403 (no role.view) or 404. Fallback to wildcard if role is admin.
+    } catch {
       return new Set();
     }
   }, []);
@@ -163,8 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(ACTIVE_ROLE_KEY, roleId);
       }
       setActiveRoleId(res.active_role_id);
-      // bust permission cache for this role since BE may have changed
-      permCacheRef.current.delete(roleId);
+      setRoleVersion((v) => v + 1); // triggers workspace data refetch in consumers
+      permCacheRef.current.clear(); // clear all cached permissions on role switch
       await recomputePermissions(res.active_role ?? null);
     },
     [recomputePermissions],
@@ -202,7 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Legacy flags — derived from permission slug + role metadata for backward compatibility
   const isDosen = roleName === 'dosen';
   const isTendik = roleName === 'tendik';
-  const canCreateFolder = hasPermission('folder.create') || isAdmin || (!!user && !isDosen && !isTendik);
+  const canCreateFolder = hasPermission('folder.create') || isAdmin;
+  const canCreateSubfolder = hasPermission('folder.create_subfolder') || hasPermission('folder.create') || isAdmin;
 
   return (
     <AuthContext.Provider
@@ -215,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         activeRoleId,
         assignments,
         loadingRoles,
+        roleVersion,
         switchRole,
         refreshRoles,
         permissionSlugs,
@@ -226,6 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isDosen,
         isTendik,
         canCreateFolder,
+        canCreateSubfolder,
       }}
     >
       {children}

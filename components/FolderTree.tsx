@@ -42,6 +42,7 @@ interface FolderItemProps {
   onDelete: (id: string) => void;
   depth: number;
   maxDepth: number;
+  canCreateSubfolder: boolean;
 }
 
 function FolderItem({
@@ -52,6 +53,7 @@ function FolderItem({
   onEdit,
   onDelete,
   depth,
+  canCreateSubfolder,
   maxDepth
 }: FolderItemProps) {
   const [expanded, setExpanded] = useState(false);
@@ -87,20 +89,29 @@ function FolderItem({
           <span className="text-black text-sm font-medium">{folder.name}</span>
         </button>
         <div className="flex gap-1">
+          {canCreateSubfolder && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onCreateSubfolder(folder.id);
             }}
-            disabled={depth >= maxDepth}
-            className={`rounded px-2 py-1 text-xs ${depth >= maxDepth
-              ? 'text-gray-400 cursor-not-allowed'
-              : 'text-blue-600 hover:bg-blue-50'
-              }`}
-            title={depth >= maxDepth ? `Max ${maxDepth} levels reached` : "Create subfolder"}
+            disabled={depth >= maxDepth || (folder.children?.length ?? 0) >= maxDepth}
+            className={`rounded px-2 py-1 text-xs ${
+              depth >= maxDepth || (folder.children?.length ?? 0) >= maxDepth
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-blue-600 hover:bg-blue-50'
+            }`}
+            title={
+              (folder.children?.length ?? 0) >= maxDepth
+                ? `Batas subfolder sudah tercapai (maks ${maxDepth})`
+                : depth >= maxDepth
+                ? `Max ${maxDepth} levels reached`
+                : 'Buat subfolder'
+            }
           >
             <Plus className="h-3 w-3" />
           </button>
+        )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -136,6 +147,7 @@ function FolderItem({
               onDelete={onDelete}
               depth={depth + 1}
               maxDepth={maxDepth}
+              canCreateSubfolder={canCreateSubfolder}
             />
           ))}
         </div>
@@ -150,7 +162,7 @@ interface FolderTreeProps {
 }
 
 export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps) {
-  const { user, isAdmin, canCreateFolder } = useAuthContext();
+  const { user, isAdmin, isSuperAdmin, canCreateFolder, canCreateSubfolder, roleVersion } = useAuthContext();
   const roleName = (typeof user?.role === 'object' ? user?.role?.name : user?.role)?.toLowerCase() || '';
   const isWD1 = roleName === 'wd1' || roleName.includes('wakil dekan 1');
   const isWD2 = roleName === 'wd2' || roleName.includes('wakil dekan 2');
@@ -159,8 +171,17 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const pathname = usePathname();
   const { activeMenu, setActiveMenu } = useFolderContext();
   const [adminMode, setAdminMode] = useState(false);
-  const { folders, loading, error, createFolder, deleteFolder, refresh } = useFolders(adminMode && isAdmin);
+  const { folders, loading, error, createFolder, deleteFolder, refresh } = useFolders(adminMode && isAdmin, roleVersion);
   const { folders: sharedFolders } = useSharedFolders();
+
+  // Reset workspace state whenever the active role changes
+  useEffect(() => {
+    if (roleVersion > 0) {
+      onFolderSelect(null);
+      setActiveMenu(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleVersion]);
 
   // Computed: user has shared access if any folders are shared with them
   const hasSharedAccess = sharedFolders.length > 0;
@@ -499,6 +520,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onDelete={handleDeleteFolder}
                   depth={1}
                   maxDepth={maxFolderDepth}
+                  canCreateSubfolder={canCreateSubfolder}
                 />
               ))
             )}

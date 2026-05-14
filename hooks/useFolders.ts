@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type { FolderTreeNode } from '@/types';
 
-export function useFolders(adminMode = false) {
+export function useFolders(adminMode = false, roleVersion = 0) {
   const [folders, setFolders] = useState<FolderTreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,8 +13,7 @@ export function useFolders(adminMode = false) {
     try {
       setLoading(true);
       setError(null);
-      // Use admin endpoint if admin mode, otherwise use regular endpoint
-      const data = adminMode 
+      const data = adminMode
         ? await apiClient.getAdminFolderTree()
         : await apiClient.getFolderTree();
       setFolders(data);
@@ -27,7 +26,7 @@ export function useFolders(adminMode = false) {
 
   useEffect(() => {
     fetchFolders();
-  }, [fetchFolders]);
+  }, [fetchFolders, roleVersion]); // refetch when role switches
 
   const createFolder = useCallback(async (name: string, parentId?: string, shareWithRoles?: string[], userPermissions?: any[]) => {
     try {
