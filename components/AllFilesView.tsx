@@ -18,12 +18,12 @@ import toast from 'react-hot-toast';
 type FilterTab = 'my-files' | 'shared-files';
 
 export function AllFilesView() {
-  const { user } = useAuthContext();
+  const { user, roleVersion } = useAuthContext();
   const { folders } = useFolders(false);
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
-  
+
   const myOwnFiles = allFiles.filter(f => !f.owner_id || f.owner_id === user?.id);
-  const { files: sharedFiles, loading: sharedLoading, error: sharedError, downloadFile: downloadShared } = useSharedFiles();
+  const { files: sharedFiles, loading: sharedLoading, error: sharedError, downloadFile: downloadShared } = useSharedFiles(roleVersion);
   
   const [activeTab, setActiveTab] = useState<FilterTab>('my-files');
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);

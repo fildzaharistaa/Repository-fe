@@ -19,7 +19,6 @@ import {
   Trash2,
   Edit2,
   Search,
-  Check
 } from 'lucide-react';
 import Image from 'next/image';
 import { useFolders } from '@/hooks/useFolders';
@@ -172,7 +171,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const { activeMenu, setActiveMenu } = useFolderContext();
   const [adminMode, setAdminMode] = useState(false);
   const { folders, loading, error, createFolder, deleteFolder, refresh } = useFolders(adminMode && isAdmin, roleVersion);
-  const { folders: sharedFolders } = useSharedFolders();
+  const { folders: sharedFolders } = useSharedFolders(roleVersion);
 
   // Reset workspace state whenever the active role changes
   useEffect(() => {
@@ -191,7 +190,6 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
   const [loadingDelete, setLoadingDelete] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [shareWithWD1, setShareWithWD1] = useState(isWD1);
   const [shareWithWD2, setShareWithWD2] = useState(isWD2);
   const [shareWithWD3, setShareWithWD3] = useState(isWD3);
@@ -270,7 +268,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
 
       await deleteFolder(permissionToDelete);
       refresh();
-      setSuccessMessage('Folder telah berhasil dipindahkan ke Recycle Bin.');
+      toast.success('Folder telah berhasil dipindahkan ke Recycle Bin.');
       setShowConfirm(false);
       setPermissionToDelete(null);
     } catch (err) {
@@ -549,7 +547,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         editFolderId={editFolderId}
         parentId={parentId}
         initialFolderName={newFolderName}
-        onSuccess={(msg) => setSuccessMessage(msg)}
+        onSuccess={(msg) => toast.success(msg)}
         refreshFolders={refresh}
       />
       <ConfirmModal
@@ -563,27 +561,6 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
         }}
         onConfirm={confirmDeleteFolder}
       />
-
-      {/* Success Modal */}
-      {successMessage && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              {successMessage}
-            </p>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-orange-700 hover:shadow-lg transition-all"
-            >
-              Tutup Jendela
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Hierarchy Request Modal */}
       {showHierarchyModal && (
@@ -642,7 +619,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                     });
                     setShowHierarchyModal(false);
                     setHierarchyMessage('');
-                    setSuccessMessage(`Request tambah kedalaman folder ke ${requestedDepth} level telah dikirim ke Super Admin.`);
+                    toast.success(`Request tambah kedalaman folder ke ${requestedDepth} level telah dikirim ke Super Admin.`);
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : 'Gagal mengirim request');
                   }

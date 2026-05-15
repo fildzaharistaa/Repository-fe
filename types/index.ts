@@ -100,6 +100,7 @@ export interface Folder {
   id: string;
   name: string;
   parent_id: string | null;
+  role_id?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -132,6 +133,8 @@ export interface File {
   owner_name?: string;
   owner_email?: string;
   owner_role?: string;
+  uploaded_by?: string;
+  uploaded_by_role?: string;
   can_read?: boolean;
   can_download?: boolean;
   can_create?: boolean;

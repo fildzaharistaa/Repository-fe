@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type { FolderTreeNode } from '@/types';
 
-export function useSharedFolders() {
+export function useSharedFolders(roleVersion = 0) {
   const [folders, setFolders] = useState<FolderTreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function useSharedFolders() {
 
   useEffect(() => {
     fetchFolders();
-  }, [fetchFolders]);
+  }, [fetchFolders, roleVersion]); // refetch when role switches
 
   return {
     folders,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSharedFiles } from '@/hooks/useSharedFiles';
+import { useAuthContext } from '@/context/AuthContext';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
 import { Eye, Download, FileText, Loader2, X } from 'lucide-react';
@@ -10,16 +11,20 @@ import type { File as FileEntity } from '@/types';
 
 
 export function SharedFilesView() {
-  const { files, loading, error, downloadFile } = useSharedFiles();
+  const { roleVersion } = useAuthContext();
+  const { files, loading, error, downloadFile } = useSharedFiles(roleVersion);
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
   const [showQuickView, setShowQuickView] = useState(false);
 
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
-  const uniqueRoles = Array.from(new Set(files.map((f: any) => f.owner_role).filter(Boolean)));
+  // Prefer the upload-time role snapshot; fall back to owner_role for legacy files.
+  const getUploaderRole = (f: any): string => f.uploaded_by_role || f.owner_role || '';
 
-  const filteredFiles = files.filter((f: any) => 
-    roleFilter === 'all' || f.owner_role === roleFilter
+  const uniqueRoles = Array.from(new Set(files.map((f: any) => getUploaderRole(f)).filter(Boolean)));
+
+  const filteredFiles = files.filter((f: any) =>
+    roleFilter === 'all' || getUploaderRole(f) === roleFilter
   );
 
   const handleQuickView = (file: FileEntity) => {
@@ -126,14 +131,14 @@ export function SharedFilesView() {
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 font-medium">
-                    {file.owner_name}
+                    {file.uploaded_by || file.owner_name}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {file.owner_email || '-'}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                      {file.owner_role}
+                      {getUploaderRole(file)}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
@@ -184,7 +189,10 @@ export function SharedFilesView() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 truncate max-w-md">{selectedFile.name}</h3>
                   <p className="text-sm text-gray-500">
-                    {formatFileSize(selectedFile.size)} • Shared by {selectedFile.owner_name}
+                    {formatFileSize(selectedFile.size)} • Uploaded by {(selectedFile as any).uploaded_by || selectedFile.owner_name}
+                    {getUploaderRole(selectedFile) && (
+                      <span className="ml-1">— {getUploaderRole(selectedFile)}</span>
+                    )}
                   </p>
                 </div>
               </div>

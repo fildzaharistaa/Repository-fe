@@ -34,9 +34,6 @@ export function RecycleBinView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   // Confirm modal state
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<{ id: string; type: 'file' | 'folder'; name: string } | null>(null);
@@ -68,10 +65,10 @@ export function RecycleBinView() {
       } else {
         await apiClient.restoreFolder(id);
       }
-      setSuccessMessage(`"${name}" berhasil dikembalikan dari recycle bin.`);
+      toast.success(`"${name}" berhasil dikembalikan dari recycle bin.`);
       await fetchTrashed();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Gagal me-restore item');
+      toast.error(err instanceof Error ? err.message : 'Gagal me-restore item');
     } finally {
       setActionLoading(null);
     }
@@ -92,12 +89,12 @@ export function RecycleBinView() {
       } else {
         await apiClient.permanentDeleteFolder(confirmTarget.id);
       }
-      setSuccessMessage(`"${confirmTarget.name}" berhasil dihapus secara permanen.`);
+      toast.success(`"${confirmTarget.name}" berhasil dihapus secara permanen.`);
       setShowConfirm(false);
       setConfirmTarget(null);
       await fetchTrashed();
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Gagal menghapus permanen');
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus permanen');
     } finally {
       setConfirmLoading(false);
     }
@@ -259,47 +256,6 @@ export function RecycleBinView() {
         onConfirm={confirmPermanentDelete}
       />
 
-      {/* Success Modal */}
-      {successMessage && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl border border-green-100">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm animate-bounce-short">
-              <RotateCcw className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Berhasil!</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              {successMessage}
-            </p>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-green-700 hover:shadow-lg transition-all"
-            >
-              Oke, Mengerti
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Error Modal */}
-      {errorMessage && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl border border-red-100">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-4 shadow-sm">
-              <AlertCircle className="h-8 w-8 text-red-600 animate-pulse" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Gagal!</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              {errorMessage}
-            </p>
-            <button
-              onClick={() => setErrorMessage(null)}
-              className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-red-700 hover:shadow-lg transition-all"
-            >
-              Tutup
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

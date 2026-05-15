@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, DragEvent, useMemo, Fragment } from 'react';
 import { useFolderContext } from '@/context/FolderContext';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, Check, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/context/AuthContext';
@@ -25,7 +25,17 @@ export function FileList({ folderId }: FileListProps) {
   const [parentFolderId, setParentFolderId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileEntity | null>(null);
 
-  const { setSelectedFolderId } = useFolderContext();
+  const { setSelectedFolderId, virtualRootFolderId, setVirtualRootFolderId, setActiveMenu } = useFolderContext();
+
+  const handleBack = () => {
+    if (folderId === virtualRootFolderId) {
+      setVirtualRootFolderId(null);
+      setSelectedFolderId(null);
+      setActiveMenu('shared-folders');
+    } else {
+      setSelectedFolderId(parentFolderId);
+    }
+  };
   const [subfolders, setSubfolders] = useState<any[]>([]);
   const { user } = useAuth();
   const { isAdmin, hasPermission } = useAuthContext();
@@ -105,8 +115,6 @@ export function FileList({ folderId }: FileListProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   // States for Request Access Modal
@@ -297,7 +305,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setRenameLoading(true);
       await renameFile(fileToRename.id, finalName);
-      setSuccessMessage(`File berhasil diganti nama menjadi "${finalName}"`);
+      toast.success(`File berhasil diganti nama menjadi "${finalName}"`);
       setShowRenameModal(false);
       setFileToRename(null);
     } catch (err: any) {
@@ -339,8 +347,9 @@ export function FileList({ folderId }: FileListProps) {
         message: shareMessage.trim() || undefined
       });
 
-      setSuccessMessage(`File "${fileToShare.name}" berhasil dibagikan ke pengguna dan grup yang Anda pilih.`);
+      toast.success(`File "${fileToShare.name}" berhasil dibagikan ke pengguna dan grup yang Anda pilih.`);
       setShowShareModal(false);
+      setFileToShare(null);
     } catch (err) {
       toast.error('Gagal membagikan file');
     } finally {
@@ -353,7 +362,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setDeleteLoading(true);
       await deleteFile(fileToDelete.id);
-      setSuccessMessage(`File "${fileToDelete.name}" telah dipindahkan ke Recycle Bin.`);
+      toast.success(`File "${fileToDelete.name}" telah dipindahkan ke Recycle Bin.`);
       setShowDeleteConfirm(false);
       setFileToDelete(null);
     } catch (err) {
@@ -389,19 +398,19 @@ export function FileList({ folderId }: FileListProps) {
           ? `File "${errorFiles[0]}" gagal diunggah karena melebihi batas maksimum 5MB.`
           : `${errorFiles.length} file gagal diunggah karena melebihi batas maksimum 5MB.`;
 
-        setErrorMessage(errorMsg);
+        toast.error(errorMsg);
 
         if (successCount > 0) {
-          setSuccessMessage(`${successCount} file lainnya berhasil diunggah.`);
+          toast.success(`${successCount} file lainnya berhasil diunggah.`);
         }
       } else {
-        setSuccessMessage('Semua file telah berhasil diunggah.');
+        toast.success('Semua file telah berhasil diunggah.');
       }
 
       setShowUploadModal(false);
 
     } catch (err) {
-      setErrorMessage(handleApiError(err));
+      toast.error(handleApiError(err));
     }
   };
 
@@ -425,11 +434,11 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setRequestLoading(true);
       await apiClient.requestAccess({ folderId, message: requestMessage });
-      setSuccessMessage('Permintaan akses telah dikirim ke pemilik folder.');
+      toast.success('Permintaan akses telah dikirim ke pemilik folder.');
       setShowRequestModal(false);
       setRequestMessage('');
     } catch (err) {
-      setErrorMessage(handleApiError(err));
+      toast.error(handleApiError(err));
     } finally {
       setRequestLoading(false);
     }
@@ -481,7 +490,7 @@ export function FileList({ folderId }: FileListProps) {
                   Minta Akses ke Folder Ini
                 </button>
                 <button
-                  onClick={() => setSelectedFolderId(parentFolderId)}
+                  onClick={handleBack}
                   className="w-full rounded-xl border border-red-200 bg-white px-6 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-all"
                 >
                   Kembali
@@ -512,6 +521,14 @@ export function FileList({ folderId }: FileListProps) {
                 <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
               </button>
               <p className="text-xs text-gray-500">{fileInfo.label}</p>
+              {(!isOwnerOrAdmin || legacyDosenTendik) && (file.uploaded_by || file.owner_name) && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {file.uploaded_by || file.owner_name}
+                  {(file.uploaded_by_role || file.owner_role) && (
+                    <span className="ml-1 text-gray-400">– {formatRoleName(file.uploaded_by_role || file.owner_role || '')}</span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
         </td>
@@ -591,7 +608,7 @@ export function FileList({ folderId }: FileListProps) {
               <div className="flex items-center gap-3">
                 {folderId && (
                   <button
-                    onClick={() => setSelectedFolderId(parentFolderId)}
+                    onClick={handleBack}
                     className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                     title="Kembali ke folder sebelumnya"
                   >
@@ -688,7 +705,9 @@ export function FileList({ folderId }: FileListProps) {
                             const owner = groupData.user;
                             const name = owner?.name || "User Tidak Diketahui";
                             const email = owner?.email || "";
-                            const roleRaw = typeof owner?.role === 'object' ? owner?.role?.name : owner?.role;
+                            const firstFile = groupData.items[0] as any;
+                            const roleRaw = firstFile?.uploaded_by_role
+                              || (typeof owner?.role === 'object' ? owner?.role?.name : owner?.role);
                             const roleLabel = formatRoleName(roleRaw);
 
                             // Generate initials for avatar
@@ -1156,46 +1175,6 @@ export function FileList({ folderId }: FileListProps) {
         onConfirm={confirmDelete}
       />
 
-      {/* Success Modal */}
-      {successMessage && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl border border-green-100">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm animate-bounce-short">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              {successMessage}
-            </p>
-            <button
-              onClick={() => { setSuccessMessage(null); setFileToShare(null); }}
-              className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-green-700 hover:shadow-lg transition-all"
-            >
-              Lanjutkan
-            </button>
-          </div>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl border border-red-100">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-4 shadow-sm">
-              <AlertCircle className="h-8 w-8 text-red-600 animate-pulse" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Ups, Gagal!</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              {errorMessage}
-            </p>
-            <button
-              onClick={() => setErrorMessage(null)}
-              className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-red-700 hover:shadow-lg transition-all"
-            >
-              Saya Mengerti
-            </button>
-          </div>
-        </div>
-      )}
       {/* Request Access Modal */}
       {showRequestModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
@@ -1232,26 +1211,6 @@ export function FileList({ folderId }: FileListProps) {
                 {requestLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Kirim Permintaan'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-      {/* Success Modal */}
-      {successMessage && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm shadow-2xl">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center transform shadow-2xl">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4 shadow-sm">
-              <Check className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">Sukses!</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              {successMessage}
-            </p>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="w-full rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-orange-700 hover:shadow-lg transition-all"
-            >
-              Tutup Jendela
-            </button>
           </div>
         </div>
       )}

@@ -153,7 +153,7 @@ export function Chatbot() {
                 onKeyPress={handleKeyPress}
                 placeholder="Tanyakan tentang folder..."
                 disabled={loading}
-                className="text-black flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="text-black placeholder:text-gray-400 flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               <button
                 onClick={handleSend}

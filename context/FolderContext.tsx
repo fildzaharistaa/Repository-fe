@@ -9,6 +9,8 @@ interface FolderContextType {
   setSelectedFolderId: (id: string | null) => void;
   activeMenu: ActiveMenu;
   setActiveMenu: (menu: ActiveMenu) => void;
+  virtualRootFolderId: string | null;
+  setVirtualRootFolderId: (id: string | null) => void;
 }
 
 const FolderContext = createContext<FolderContextType | undefined>(undefined);
@@ -16,9 +18,17 @@ const FolderContext = createContext<FolderContextType | undefined>(undefined);
 export function FolderProvider({ children }: { children: ReactNode }) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [activeMenu, setActiveMenu] = useState<ActiveMenu>('dashboard');
+  const [virtualRootFolderId, setVirtualRootFolderId] = useState<string | null>(null);
 
   return (
-    <FolderContext.Provider value={{ selectedFolderId, setSelectedFolderId, activeMenu, setActiveMenu }}>
+    <FolderContext.Provider value={{
+      selectedFolderId,
+      setSelectedFolderId,
+      activeMenu,
+      setActiveMenu,
+      virtualRootFolderId,
+      setVirtualRootFolderId,
+    }}>
       {children}
     </FolderContext.Provider>
   );

@@ -11,10 +11,10 @@ import type { FolderTreeNode } from '@/types';
 type FilterTab = 'my-folders' | 'shared-folders';
 
 export function AllFoldersView() {
-  const { folders, loading, error } = useFolders(false);
-  const { folders: sharedFolders, loading: sharedLoading, error: sharedError } = useSharedFolders();
-  const { selectedFolderId, setSelectedFolderId } = useFolderContext();
-  const { canCreateFolder } = useAuthContext();
+  const { selectedFolderId, setSelectedFolderId, setVirtualRootFolderId } = useFolderContext();
+  const { canCreateFolder, roleVersion } = useAuthContext();
+  const { folders, loading, error } = useFolders(false, roleVersion);
+  const { folders: sharedFolders, loading: sharedLoading, error: sharedError } = useSharedFolders(roleVersion);
   const [activeTab, setActiveTab] = useState<FilterTab>(canCreateFolder ? 'my-folders' : 'shared-folders');
   
   // Only show parent (root) folders — subfolders appear when user clicks into a parent
@@ -130,7 +130,14 @@ export function AllFoldersView() {
             return (
               <button
                 key={folder.id}
-                onClick={() => setSelectedFolderId(folder.id)}
+                onClick={() => {
+                  if (isShared) {
+                    setVirtualRootFolderId(folder.id);
+                  } else {
+                    setVirtualRootFolderId(null);
+                  }
+                  setSelectedFolderId(folder.id);
+                }}
                 className={`group relative rounded-xl border-2 p-5 text-left transition-all hover:shadow-lg ${
                   isSelected
                     ? 'border-orange-500 bg-orange-50 shadow-md'

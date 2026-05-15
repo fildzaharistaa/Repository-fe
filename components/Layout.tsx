@@ -18,7 +18,7 @@ const SIDEBAR_STORAGE_KEY = 'sidebar_width';
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout, activeRole } = useAuthContext();
   const router = useRouter();
-  const { selectedFolderId, setSelectedFolderId } = useFolderContext();
+  const { selectedFolderId, setSelectedFolderId, setVirtualRootFolderId } = useFolderContext();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
@@ -78,7 +78,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div style={{ width: sidebarWidth }} className="h-full overflow-hidden">
             <FolderTree
               selectedFolderId={selectedFolderId}
-              onFolderSelect={setSelectedFolderId}
+              onFolderSelect={(id) => {
+                setVirtualRootFolderId(null);
+                setSelectedFolderId(id);
+              }}
             />
           </div>
         )}

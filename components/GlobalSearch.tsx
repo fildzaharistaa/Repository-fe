@@ -29,7 +29,7 @@ export function GlobalSearch() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { setSelectedFolderId, setActiveMenu } = useFolderContext();
+  const { setSelectedFolderId, setActiveMenu, setVirtualRootFolderId } = useFolderContext();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -205,6 +205,7 @@ export function GlobalSearch() {
                     onClick={() => {
                       setOpen(false);
                       if (item.type === 'folder') {
+                        setVirtualRootFolderId(null);
                         setSelectedFolderId(item.id);
                         setActiveMenu(null);
                         router.push('/dashboard');

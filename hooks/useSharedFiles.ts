@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 
-export function useSharedFiles() {
+export function useSharedFiles(roleVersion = 0) {
   const [files, setFiles] = useState<FileEntity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function useSharedFiles() {
 
   useEffect(() => {
     fetchFiles();
-  }, [fetchFiles]);
+  }, [fetchFiles, roleVersion]); // refetch when role switches
 
   const downloadFile = useCallback(async (id: string, filename: string) => {
     try {

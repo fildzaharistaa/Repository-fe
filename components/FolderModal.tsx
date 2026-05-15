@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Search, ChevronDown, Check } from 'lucide-react';
+import { X, Search, ChevronDown, Check, FolderPlus, Plus, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { useAuthContext } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
@@ -41,6 +41,7 @@ export function FolderModal({
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [userPermissions, setUserPermissions] = useState<Record<string, { read: boolean, download: boolean }>>({});
   const [loading, setLoading] = useState(false);
+  const [defaultSubfolders, setDefaultSubfolders] = useState<string[]>([]);
 
   // Load roles once
   useEffect(() => {
@@ -58,10 +59,14 @@ export function FolderModal({
       setFolderName(initialFolderName);
       fetchUsers();
       if (editFolderId) {
+        // Reset before async fetch to avoid stale state from previous modal session
+        setSelectedRoleIds(new Set());
+        setUserPermissions({});
         fetchFolderDetails(editFolderId);
       } else {
         setSelectedRoleIds(new Set());
         setUserPermissions({});
+        setDefaultSubfolders([]);
       }
     }
   }, [isOpen, editFolderId, initialFolderName]);
@@ -86,10 +91,16 @@ export function FolderModal({
       const newPerms: Record<string, { read: boolean, download: boolean }> = {};
       const newSelectedIds = new Set<string>();
 
+      // folder.role_id is the workspace role auto-granted to the owner — never treat it as a user-selected share
+      const ownerWorkspaceRoleId = folder.role_id ?? null;
+
       if (folder.permissions) {
         folder.permissions.forEach((perm: any) => {
           if (perm.role && perm.role_id) {
-            newSelectedIds.add(perm.role_id);
+            // Skip the owner's workspace role: it is auto-granted on creation, not a sharing choice
+            if (perm.role_id !== ownerWorkspaceRoleId) {
+              newSelectedIds.add(perm.role_id);
+            }
           }
           if (perm.user && perm.user_id && perm.user_id !== folder.owner_id) {
             newPerms[perm.user_id] = {
@@ -115,6 +126,11 @@ export function FolderModal({
     });
   };
 
+  const addSubfolder = () => setDefaultSubfolders(prev => [...prev, '']);
+  const removeSubfolder = (i: number) => setDefaultSubfolders(prev => prev.filter((_, idx) => idx !== i));
+  const updateSubfolder = (i: number, val: string) =>
+    setDefaultSubfolders(prev => prev.map((s, idx) => (idx === i ? val : s)));
+
   const handleSave = async () => {
     if (!folderName.trim()) return;
 
@@ -126,15 +142,29 @@ export function FolderModal({
         .filter((r) => selectedRoleIds.has(r.id))
         .map((r) => r.name);
 
+      // Build user-specific permission entries.
+      // Include role_id of the recipient user so the permission is scoped to the
+      // correct role context — the subfolder will then appear in the right
+      // "Shared with me" view when the recipient acts as that role.
       const uPerms = Object.entries(userPermissions)
-        .map(([userId, perms]) => ({
-          user_id: userId,
-          can_read: perms.download,
-          can_create: false,
-          can_update: false,
-          can_delete: false,
-          can_download: perms.download
-        }))
+        .map(([userId, perms]) => {
+          const userObj = users.find((u) => u.id === userId);
+          const roleId: string | null =
+            (typeof userObj?.role === 'object' && userObj?.role !== null
+              ? (userObj.role as any).id ?? null
+              : null) ??
+            (userObj as any)?.role_id ??
+            null;
+          return {
+            user_id: userId,
+            role_id: roleId,
+            can_read: perms.download,
+            can_create: false,
+            can_update: false,
+            can_delete: false,
+            can_download: perms.download,
+          };
+        })
         .filter(p => p.can_download);
 
       if (editFolderId) {
@@ -145,11 +175,13 @@ export function FolderModal({
         });
         onSuccess(`Eksekusi pengaturan Folder "${folderName}" sukses diperbarui.`);
       } else {
+        const validSubfolders = defaultSubfolders.map(s => s.trim()).filter(Boolean);
         await apiClient.createFolder({
           name: folderName,
           parent_id: parentId || undefined,
           share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
-          user_permissions: uPerms.length > 0 ? uPerms : undefined
+          user_permissions: uPerms.length > 0 ? uPerms : undefined,
+          initial_subfolders: validSubfolders.length > 0 ? validSubfolders : undefined,
         });
         onSuccess(`Folder "${folderName}" telah berhasil diciptakan.`);
       }
@@ -240,30 +272,87 @@ export function FolderModal({
                     const isChecked = selectedRoleIds.has(role.id);
                     const isMyRole = role.id === myActiveRoleId;
                     return (
-                      <label
-                        key={role.id}
-                        className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'border-orange-200 bg-orange-50'
-                            : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleRoleId(role.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                        />
-                        <span className="flex-1 font-medium text-gray-700">{role.name}</span>
+                      <div key={role.id} className="relative group">
+                        <label
+                          className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors ${
+                            isMyRole
+                              ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                              : isChecked
+                                ? 'border-orange-200 bg-orange-50 cursor-pointer'
+                                : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => !isMyRole && toggleRoleId(role.id)}
+                            disabled={isMyRole}
+                            className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          />
+                          <span className={`flex-1 font-medium ${isMyRole ? 'text-gray-400' : 'text-gray-700'}`}>
+                            {role.name}
+                          </span>
+                          {isMyRole && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 border border-gray-200">
+                              Role Aktif
+                            </span>
+                          )}
+                        </label>
                         {isMyRole && (
-                          <span className="text-[10px] font-semibold text-orange-500">(Saya)</span>
+                          <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
+                            Ini adalah role Anda saat ini. Folder ini sudah dapat diakses oleh role ini secara otomatis.
+                          </div>
                         )}
-                      </label>
+                      </div>
                     );
                   })}
                 </div>
               )}
             </div>
+
+            {/* Default Subfolder Template — create mode only */}
+            {!editFolderId && (
+              <div className="mt-6">
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  Default Subfolder Template
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Subfolder berikut akan otomatis dibuat di dalam folder ini dan mewarisi semua permission sharing di atas.
+                </p>
+                <div className="space-y-2">
+                  {defaultSubfolders.map((name, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <FolderPlus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={e => updateSubfolder(i, e.target.value)}
+                          placeholder={`Subfolder ${i + 1}`}
+                          className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm text-black focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeSubfolder(i)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-red-200 text-red-400 hover:bg-red-50 transition-colors"
+                        title="Hapus subfolder"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addSubfolder}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-orange-300 px-3 py-2 text-sm text-orange-600 hover:bg-orange-50 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Subfolder Default
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right panel: specific user permissions */}

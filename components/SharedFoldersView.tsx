@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useFolderContext } from '@/context/FolderContext';
+import { useAuthContext } from '@/context/AuthContext';
 import { Folder, Loader2, Mail, User } from 'lucide-react';
 import { formatDate } from '@/lib/utils/formatters';
 
 export function SharedFoldersView() {
-  const { folders, loading, error } = useSharedFolders();
-  const { setSelectedFolderId } = useFolderContext();
+  const { roleVersion } = useAuthContext();
+  const { folders, loading, error } = useSharedFolders(roleVersion);
+  const { setSelectedFolderId, setVirtualRootFolderId } = useFolderContext();
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
   const uniqueRoles = Array.from(new Set(folders.map((f: any) => f.owner_role).filter(Boolean)));
@@ -74,7 +76,10 @@ export function SharedFoldersView() {
           {filteredFolders.map((folder) => (
             <button
               key={folder.id}
-              onClick={() => setSelectedFolderId(folder.id)}
+              onClick={() => {
+                setVirtualRootFolderId(folder.id);
+                setSelectedFolderId(folder.id);
+              }}
               className="group flex flex-col items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
             >
               <div className="flex w-full items-start justify-between">
