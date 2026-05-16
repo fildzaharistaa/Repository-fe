@@ -32,6 +32,7 @@ interface RoleFormState {
   hierarchy_level: number;
   is_admin: boolean;
   is_active: boolean;
+  is_private: boolean;
   max_folder_depth?: number | undefined;
 }
 
@@ -42,6 +43,7 @@ const emptyForm: RoleFormState = {
   hierarchy_level: 0,
   is_admin: false,
   is_active: true,
+  is_private: false,
   max_folder_depth: undefined,
 };
 
@@ -105,6 +107,7 @@ export function DynamicRoleManager() {
       hierarchy_level: r.hierarchy_level ?? 0,
       is_admin: !!r.is_admin,
       is_active: r.is_active !== false,
+      is_private: !!r.is_private,
       max_folder_depth: r.max_folder_depth ?? undefined,
     });
     setModalOpen(true);
@@ -121,6 +124,7 @@ export function DynamicRoleManager() {
         hierarchy_level: form.hierarchy_level,
         is_admin: form.is_admin,
         is_active: form.is_active,
+        is_private: form.is_private,
         max_folder_depth: form.max_folder_depth ?? undefined,
       };
       if (editingId) {
@@ -269,6 +273,11 @@ export function DynamicRoleManager() {
                     <Shield className="h-2.5 w-2.5" /> Sistem
                   </span>
                 )}
+                {r.is_private && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                    Workspace Pribadi
+                  </span>
+                )}
                 {r.is_active === false && (
                   <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold text-gray-600">Nonaktif</span>
                 )}
@@ -406,6 +415,14 @@ export function DynamicRoleManager() {
                   <p className="text-xs leading-relaxed text-gray-500">Role bisa di-assign ke user. Hilangkan centang untuk <strong>menonaktifkan sementara</strong>.</p>
                 </label>
               </div>
+
+              <label className={`flex cursor-pointer flex-col gap-1.5 rounded-xl border-2 p-4 transition-colors ${form.is_private ? 'border-purple-400 bg-purple-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={form.is_private} onChange={(e) => setForm({ ...form, is_private: e.target.checked })} className="h-4 w-4 accent-purple-600" />
+                  <span className={`text-sm font-semibold ${form.is_private ? 'text-purple-700' : 'text-gray-700'}`}>Workspace Pribadi</span>
+                </div>
+                <p className="text-xs leading-relaxed text-gray-500">Setiap user punya ruang kerja sendiri — folder tidak terlihat oleh user lain ber-role sama. Cocok untuk <strong>Dosen</strong> dan <strong>Tendik</strong>.</p>
+              </label>
             </div>
 
             <div className="shrink-0 flex items-center justify-end gap-2 rounded-b-2xl border-t border-gray-100 bg-gray-50 px-6 py-4">

@@ -4,14 +4,17 @@ import { useState } from 'react';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useFolderContext } from '@/context/FolderContext';
 import { useAuthContext } from '@/context/AuthContext';
-import { Folder, Loader2, Mail, User } from 'lucide-react';
+import { Folder, FolderPlus, Loader2, Mail, User } from 'lucide-react';
 import { formatDate } from '@/lib/utils/formatters';
+import { FolderModal } from '@/components/FolderModal';
+import toast from 'react-hot-toast';
 
 export function SharedFoldersView() {
-  const { roleVersion } = useAuthContext();
+  const { roleVersion, canCreateSubfolder } = useAuthContext();
   const { folders, loading, error } = useSharedFolders(roleVersion);
   const { setSelectedFolderId, setVirtualRootFolderId } = useFolderContext();
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [subfolderParentId, setSubfolderParentId] = useState<string | null>(null);
 
   const uniqueRoles = Array.from(new Set(folders.map((f: any) => f.owner_role).filter(Boolean)));
 
@@ -74,14 +77,32 @@ export function SharedFoldersView() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredFolders.map((folder) => (
-            <button
+            <div
               key={folder.id}
-              onClick={() => {
-                setVirtualRootFolderId(folder.id);
-                setSelectedFolderId(folder.id);
-              }}
-              className="group flex flex-col items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              className="group relative flex flex-col items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
             >
+              {/* Create subfolder button — only visible if user has permission */}
+              {canCreateSubfolder && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSubfolderParentId(folder.id);
+                  }}
+                  title="Buat subfolder"
+                  className="absolute right-3 top-3 flex items-center gap-1 rounded-lg bg-orange-50 px-2 py-1 text-xs font-medium text-orange-600 hover:bg-orange-100"
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                  <span>Subfolder</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setVirtualRootFolderId(folder.id);
+                  setSelectedFolderId(folder.id);
+                }}
+                className="w-full text-left focus:outline-none"
+              >
               <div className="flex w-full items-start justify-between">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-600 transition-colors group-hover:bg-orange-100">
                   <Folder className="h-5 w-5" />
@@ -112,11 +133,20 @@ export function SharedFoldersView() {
                   <span>{formatDate(folder.created_at)}</span>
                 </div>
               </div>
-
-            </button>
+              </button>
+            </div>
           ))}
         </div>
       )}
+      {/* FolderModal for subfolder creation inside shared folder */}
+      <FolderModal
+        isOpen={!!subfolderParentId}
+        onClose={() => setSubfolderParentId(null)}
+        editFolderId={null}
+        parentId={subfolderParentId}
+        onSuccess={(msg) => { toast.success(msg); setSubfolderParentId(null); }}
+        refreshFolders={() => {}}
+      />
     </div>
   );
 }

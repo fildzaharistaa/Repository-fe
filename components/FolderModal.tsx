@@ -26,7 +26,7 @@ export function FolderModal({
   onSuccess,
   refreshFolders
 }: FolderModalProps) {
-  const { user, activeRole } = useAuthContext();
+  const { user, activeRole, isPrivateRole } = useAuthContext();
 
   const [folderName, setFolderName] = useState(initialFolderName);
 
@@ -43,6 +43,11 @@ export function FolderModal({
   const [loading, setLoading] = useState(false);
   const [defaultSubfolders, setDefaultSubfolders] = useState<string[]>([]);
 
+  // Privat/Bagikan toggle — only relevant for private-role users creating a subfolder.
+  // Default: private (isShared=false) for private-role users, shared for others.
+  const [isShared, setIsShared] = useState(false);
+  const showPrivacyToggle = !!parentId && isPrivateRole && !editFolderId;
+
   // Load roles once
   useEffect(() => {
     apiClient.getRoles()
@@ -57,6 +62,7 @@ export function FolderModal({
   useEffect(() => {
     if (isOpen) {
       setFolderName(initialFolderName);
+      setIsShared(false); // always reset to private default on open
       fetchUsers();
       if (editFolderId) {
         // Reset before async fetch to avoid stale state from previous modal session
@@ -176,12 +182,15 @@ export function FolderModal({
         onSuccess(`Eksekusi pengaturan Folder "${folderName}" sukses diperbarui.`);
       } else {
         const validSubfolders = defaultSubfolders.map(s => s.trim()).filter(Boolean);
+        // For private-role users creating a subfolder: only share if user explicitly chose "Bagikan"
+        const applySharing = !showPrivacyToggle || isShared;
         await apiClient.createFolder({
           name: folderName,
           parent_id: parentId || undefined,
-          share_with_roles: shareRoles.length > 0 ? shareRoles : undefined,
-          user_permissions: uPerms.length > 0 ? uPerms : undefined,
+          share_with_roles: applySharing && shareRoles.length > 0 ? shareRoles : undefined,
+          user_permissions: applySharing && uPerms.length > 0 ? uPerms : undefined,
           initial_subfolders: validSubfolders.length > 0 ? validSubfolders : undefined,
+          ...(showPrivacyToggle && isShared && { is_shared_subfolder: true }),
         });
         onSuccess(`Folder "${folderName}" telah berhasil diciptakan.`);
       }
@@ -248,7 +257,7 @@ export function FolderModal({
 
         <div className="flex flex-col md:flex-row h-[500px]">
           {/* Left panel: folder name + role sharing */}
-          <div className="w-full md:w-1/3 border-r border-gray-100 bg-white p-6 overflow-y-auto">
+          <div className={`border-r border-gray-100 bg-white p-6 overflow-y-auto ${showPrivacyToggle && !isShared ? 'w-full' : 'w-full md:w-1/3'}`}>
             <div className="mb-6">
               <label className="mb-1 block text-sm font-semibold text-gray-700">Nama Folder</label>
               <input
@@ -261,6 +270,36 @@ export function FolderModal({
               />
             </div>
 
+            {/* Privat/Bagikan toggle — only for private-role users creating a subfolder */}
+            {showPrivacyToggle && (
+              <div className="mb-6">
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">Visibilitas Subfolder</label>
+                <div className="flex overflow-hidden rounded-lg border border-gray-200 text-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setIsShared(false)}
+                    className={`flex flex-1 items-center justify-center gap-1.5 py-2 transition-colors ${!isShared ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    🔒 Privat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsShared(true)}
+                    className={`flex flex-1 items-center justify-center gap-1.5 py-2 transition-colors ${isShared ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    🌐 Bagikan
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {isShared
+                    ? 'Subfolder ini akan terlihat oleh semua yang punya akses ke folder ini.'
+                    : 'Subfolder ini hanya terlihat oleh Anda.'}
+                </p>
+              </div>
+            )}
+
+            {/* Role-sharing section: always visible for root folders & edits; only when Bagikan for private-role subfolder */}
+            {(!showPrivacyToggle || isShared) && (
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">Grup Role Sharing</label>
               <p className="text-xs text-gray-500 mb-3">Pilih role yang bisa mengakses folder ini.</p>
@@ -309,6 +348,7 @@ export function FolderModal({
                 </div>
               )}
             </div>
+            )}
 
             {/* Default Subfolder Template — create mode only */}
             {!editFolderId && (
@@ -355,8 +395,8 @@ export function FolderModal({
             )}
           </div>
 
-          {/* Right panel: specific user permissions */}
-          <div className="w-full md:w-2/3 flex flex-col bg-gray-50">
+          {/* Right panel: specific user permissions — hidden when private subfolder */}
+          <div className={`w-full md:w-2/3 flex flex-col bg-gray-50 ${showPrivacyToggle && !isShared ? 'hidden md:hidden' : ''}`}>
             <div className="p-4 border-b border-gray-200 bg-white">
               <h4 className="text-sm font-semibold text-gray-800 mb-3">Spesifik User Permission (Optional)</h4>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -445,22 +485,24 @@ export function FolderModal({
               </div>
             </div>
 
-            <div className="border-t border-gray-200 bg-white p-4 flex gap-3 justify-end items-center">
-              <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
-              <button
-                onClick={handleSave}
-                disabled={loading || !folderName.trim()}
-                className="flex items-center gap-2 rounded-md bg-orange-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-                {editFolderId ? 'Simpan Perubahan' : 'Buat Folder'}
-              </button>
-            </div>
           </div>
+        </div>
+
+        {/* Footer — always visible regardless of privacy toggle state */}
+        <div className="border-t border-gray-200 bg-white px-6 py-4 flex gap-3 justify-end items-center rounded-b-xl">
+          <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Batal</button>
+          <button
+            onClick={handleSave}
+            disabled={loading || !folderName.trim()}
+            className="flex items-center gap-2 rounded-md bg-orange-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {editFolderId ? 'Simpan Perubahan' : 'Buat Folder'}
+          </button>
         </div>
       </div>
     </div>

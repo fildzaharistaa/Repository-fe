@@ -45,6 +45,7 @@ interface AuthContextType {
   /** @deprecated; derived from permission 'folder.create' */
   canCreateFolder: boolean;
   canCreateSubfolder: boolean;
+  isPrivateRole: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -208,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isTendik = roleName === 'tendik';
   const canCreateFolder = hasPermission('folder.create') || isAdmin;
   const canCreateSubfolder = hasPermission('folder.create_subfolder') || hasPermission('folder.create') || isAdmin;
+  const isPrivateRole = !!(activeRole as any)?.is_private;
 
   return (
     <AuthContext.Provider
@@ -233,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isTendik,
         canCreateFolder,
         canCreateSubfolder,
+        isPrivateRole,
       }}
     >
       {children}

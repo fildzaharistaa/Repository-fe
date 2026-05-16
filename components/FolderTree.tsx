@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Folder,
+  Check,
   Clock,
   Users,
   Lock,
@@ -85,7 +86,14 @@ function FolderItem({
           ) : (
             <Folder className="h-4 w-4 text-gray-600" />
           )}
-          <span className="text-black text-sm font-medium">{folder.name}</span>
+          <div className="flex flex-col min-w-0">
+            {(folder as any).shared_parent_name && (
+              <span className="text-[10px] font-semibold text-orange-600 truncate uppercase tracking-wide">
+                📂 {(folder as any).shared_parent_name}
+              </span>
+            )}
+            <span className="text-black text-sm font-medium truncate">{folder.name}</span>
+          </div>
         </button>
         <div className="flex gap-1">
           {canCreateSubfolder && (

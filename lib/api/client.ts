@@ -228,6 +228,7 @@ class ApiClient {
     share_with_roles?: string[];
     user_permissions?: any[];
     initial_subfolders?: string[];
+    is_shared_subfolder?: boolean;
   }): Promise<Folder> {
     return this.request<Folder>('/folders', {
       method: 'POST',

@@ -37,6 +37,7 @@ export function FileList({ folderId }: FileListProps) {
     }
   };
   const [subfolders, setSubfolders] = useState<any[]>([]);
+  const [uploaderSearch, setUploaderSearch] = useState('');
   const { user } = useAuth();
   const { isAdmin, hasPermission } = useAuthContext();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
@@ -97,6 +98,7 @@ export function FileList({ folderId }: FileListProps) {
 
   useEffect(() => {
     fetchFolderInfo();
+    setUploaderSearch(''); // reset search when folder changes
   }, [folderId, user]);
 
   const [showQuickView, setShowQuickView] = useState(false);
@@ -185,6 +187,15 @@ export function FileList({ folderId }: FileListProps) {
         .catch(err => console.error('Failed to fetch file shares', err));
     }
   }, [showShareModal, fileToShare]);
+
+  const filteredFiles = useMemo(() => {
+    if (!uploaderSearch.trim()) return files;
+    const q = uploaderSearch.toLowerCase();
+    return files.filter((f: any) =>
+      (f.uploaded_by || f.owner_name || '').toLowerCase().includes(q) ||
+      (f.uploaded_by_role || f.owner_role || '').toLowerCase().includes(q)
+    );
+  }, [files, uploaderSearch]);
 
   const groupedFiles = useMemo(() => {
     if (!isOwnerOrAdmin || legacyDosenTendik) return null;
@@ -522,12 +533,19 @@ export function FileList({ folderId }: FileListProps) {
               </button>
               <p className="text-xs text-gray-500">{fileInfo.label}</p>
               {(!isOwnerOrAdmin || legacyDosenTendik) && (file.uploaded_by || file.owner_name) && (
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {file.uploaded_by || file.owner_name}
+                <div className="mt-1 flex items-center gap-1.5">
+                  <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-100 text-[9px] font-bold text-orange-600">
+                    {(file.uploaded_by || file.owner_name || '?')[0].toUpperCase()}
+                  </div>
+                  <span className="text-xs font-medium text-gray-600">
+                    {file.uploaded_by || file.owner_name}
+                  </span>
                   {(file.uploaded_by_role || file.owner_role) && (
-                    <span className="ml-1 text-gray-400">– {formatRoleName(file.uploaded_by_role || file.owner_role || '')}</span>
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
+                      {formatRoleName(file.uploaded_by_role || file.owner_role || '')}
+                    </span>
                   )}
-                </p>
+                </div>
               )}
             </div>
           </div>
@@ -631,6 +649,25 @@ export function FileList({ folderId }: FileListProps) {
               )}
             </div>
 
+            {/* Uploader search — only shown when there are files with uploader info */}
+            {files.some((f: any) => f.uploaded_by || f.owner_name) && (
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                <Search className="h-4 w-4 shrink-0 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan nama pengupload..."
+                  value={uploaderSearch}
+                  onChange={(e) => setUploaderSearch(e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+                />
+                {uploaderSearch && (
+                  <button onClick={() => setUploaderSearch('')} className="text-gray-400 hover:text-gray-600">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -653,12 +690,21 @@ export function FileList({ folderId }: FileListProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {files.length === 0 && subfolders.length === 0 ? (
+                  {filteredFiles.length === 0 && subfolders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center">
                         <FileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                        <p className="text-sm font-medium text-gray-900">Folder is empty</p>
-                        <p className="mt-1 text-sm text-gray-500">Upload files to get started</p>
+                        {uploaderSearch ? (
+                          <>
+                            <p className="text-sm font-medium text-gray-900">Tidak ada hasil untuk "{uploaderSearch}"</p>
+                            <p className="mt-1 text-sm text-gray-500">Coba nama pengupload yang berbeda</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium text-gray-900">Folder is empty</p>
+                            <p className="mt-1 text-sm text-gray-500">Upload files to get started</p>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -782,7 +828,7 @@ export function FileList({ folderId }: FileListProps) {
                           </>
                         )
                       ) : (
-                        files.map((file) => renderFileRow(file, false))
+                        filteredFiles.map((file) => renderFileRow(file, false))
                       )}
                     </>
                   )}

@@ -18,6 +18,7 @@ export interface Role {
   is_admin?: boolean;
   is_active?: boolean;
   is_system?: boolean;
+  is_private?: boolean;
   hierarchy_level?: number;
   category?: string | null;
   color?: string | null;
@@ -115,6 +116,7 @@ export interface Folder {
 
 export interface FolderTreeNode extends Folder {
   children?: FolderTreeNode[];
+  shared_parent_name?: string | null;
 }
 
 // File Types
