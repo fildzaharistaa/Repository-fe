@@ -212,16 +212,26 @@ export function FolderModal({
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   };
 
+  // Get all role names for a user (primary + multi-role assignments)
+  const getUserRoleNames = (u: any): string[] => {
+    const fromAssignments: string[] = (u.userRoles ?? [])
+      .filter((ur: any) => ur.status === 'ACTIVE' && ur.role?.name)
+      .map((ur: any) => formatRoleName(ur.role.name));
+    const primary = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+    const all = fromAssignments.length > 0 ? fromAssignments : [primary];
+    return [...new Set(all)];
+  };
+
   const roleStats = users.reduce((acc, user) => {
-    const rName = formatRoleName(typeof user.role === 'object' ? user.role?.name : user.role);
-    if (!acc[rName]) acc[rName] = 0;
-    acc[rName]++;
+    getUserRoleNames(user).forEach((rName) => {
+      if (!acc[rName]) acc[rName] = 0;
+      acc[rName]++;
+    });
     return acc;
   }, {} as Record<string, number>);
 
   const filteredUsers = users.filter(u => {
-    const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-    const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
+    const matchesRole = selectedRoleFilter ? getUserRoleNames(u).includes(selectedRoleFilter) : true;
     const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
       (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
     return matchesRole && matchesSearch;
@@ -462,15 +472,40 @@ export function FolderModal({
                       </tr>
                     ) : (
                       filteredUsers.map((u) => {
-                        const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+                        const primaryRole = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+                        const allRoles: string[] = u.userRoles
+                          ? u.userRoles
+                              .filter((ur: any) => ur.status === 'ACTIVE' && ur.role?.name)
+                              .map((ur: any) => formatRoleName(ur.role.name))
+                          : [primaryRole];
+                        const uniqueRoleNames = [...new Set(allRoles.length > 0 ? allRoles : [primaryRole])];
+                        const hasMultipleRoles = uniqueRoleNames.length > 1;
                         const perms = userPermissions[u.id] || { read: false, download: false };
                         return (
                           <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900">{u.name}</div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
-                                <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">
+                                  {u.name?.[0]?.toUpperCase() ?? '?'}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-medium text-gray-900">{u.name}</span>
+                                    {hasMultipleRoles && (
+                                      <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                                        {uniqueRoleNames.length} roles
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                                    {uniqueRoleNames.map((rn) => (
+                                      <span key={rn} className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600">
+                                        {rn}
+                                      </span>
+                                    ))}
+                                    <span className="text-[10px] text-gray-400 truncate max-w-[130px]">{u.email}</span>
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="px-2 py-3 text-center">
