@@ -178,6 +178,16 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+// Folder Overview Stats (per root folder, recursive counts)
+export interface FolderOverviewItem {
+  id: string;
+  name: string;
+  subfolder_count: number;
+  file_count: number;
+  storage_size: number;
+  updated_at: string;
+}
+
 // Error Response
 export interface ErrorResponse {
   statusCode: number;

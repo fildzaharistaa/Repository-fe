@@ -5,6 +5,7 @@ import type {
   FolderTreeNode,
   File as FileEntity,
   FolderPermission,
+  FolderOverviewItem,
   PaginatedResponse,
   LoginResponse,
   Permission,
@@ -512,6 +513,16 @@ class ApiClient {
     recentActivity: Array<{ timestamp: string; user: string; action: string; type: 'superadmin' | 'user' }>;
   }> {
     return this.request('/stats/super-admin');
+  }
+
+  // Per-folder statistics for Folder Overview section on dashboard
+  async getFolderOverview(): Promise<FolderOverviewItem[]> {
+    return this.request<FolderOverviewItem[]>('/stats/folder-overview');
+  }
+
+  // Direct children of a folder with their recursive stats (for lazy expand)
+  async getFolderChildren(folderId: string): Promise<FolderOverviewItem[]> {
+    return this.request<FolderOverviewItem[]>(`/stats/folder-children/${folderId}`);
   }
 
   // Data Statistik User Biasa (Hanya folder milik sendiri)

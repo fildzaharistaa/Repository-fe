@@ -5,6 +5,7 @@ import { Folder, FileText, HardDrive, Clock } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { formatFileSize } from '@/lib/utils/formatters';
 import { useAuthContext } from '@/context/AuthContext';
+import { FolderOverviewSection } from '@/components/FolderOverviewSection';
 
 interface UserStats {
   totalFolders: number;
@@ -23,6 +24,7 @@ interface UserStats {
 
 export function DashboardStats() {
   const { roleVersion } = useAuthContext();
+  // roleVersion is forwarded to FolderOverviewSection so it refetches on role switch
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -209,6 +211,9 @@ export function DashboardStats() {
           </div>
         )}
       </div>
+
+      {/* Folder Overview section */}
+      <FolderOverviewSection roleVersion={roleVersion} />
     </div>
   );
 }
