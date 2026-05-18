@@ -5,6 +5,7 @@ export interface User {
   name: string;
   role_id: string;
   role: Role;
+  userRoles?: UserRole[];
   max_folder_depth?: number | null;
   created_at: string;
   updated_at: string;
