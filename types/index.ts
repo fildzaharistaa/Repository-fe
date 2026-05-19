@@ -187,6 +187,10 @@ export interface FolderOverviewItem {
   file_count: number;
   storage_size: number;
   updated_at: string;
+  owner_name?: string | null;
+  owner_email?: string | null;
+  owner_role?: string | null;
+  is_shared?: boolean;
 }
 
 // Error Response

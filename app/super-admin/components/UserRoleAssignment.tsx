@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
   ChevronDown,
@@ -70,6 +70,17 @@ export function UserRoleAssignment() {
   const [addExpires, setAddExpires] = useState('');
   const [addDescription, setAddDescription] = useState('');
   const [addFormOpen, setAddFormOpen] = useState(false);
+  const [addRoleOpen, setAddRoleOpen] = useState(false);
+  const addRoleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (addRoleRef.current && !addRoleRef.current.contains(e.target as Node))
+        setAddRoleOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Inline edit description per assignment
   const [editingAssignId, setEditingAssignId] = useState<string | null>(null);
@@ -603,16 +614,54 @@ export function UserRoleAssignment() {
                 ) : (
                   <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-2">
                     <p className="text-xs font-semibold text-blue-700">Tambah Role Baru</p>
-                    <select
-                      value={addRoleId}
-                      onChange={(e) => setAddRoleId(e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                    >
-                      <option value="">— pilih role —</option>
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.id}>{r.name}</option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={addRoleRef}>
+                      <button
+                        type="button"
+                        onClick={() => setAddRoleOpen((o) => !o)}
+                        className="flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm hover:border-blue-400 focus:outline-none"
+                      >
+                        {addRoleId ? (() => {
+                          const r = roles.find(r => r.id === addRoleId);
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: r?.color || '#94a3b8' }} />
+                              <span className="font-medium text-gray-800">{r?.name}</span>
+                              {r?.is_admin && <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-bold text-red-700">Admin</span>}
+                              {r?.is_private && <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-bold text-purple-700">Private</span>}
+                            </div>
+                          );
+                        })() : <span className="text-gray-400 text-sm">— pilih role —</span>}
+                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${addRoleOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {addRoleOpen && (
+                        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-gray-100 bg-white shadow-xl">
+                          <div className="p-1.5 space-y-0.5">
+                            {roles.map((r) => (
+                              <button
+                                key={r.id}
+                                type="button"
+                                onClick={() => { setAddRoleId(r.id); setAddRoleOpen(false); }}
+                                className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${
+                                  addRoleId === r.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: r.color || '#94a3b8' }} />
+                                  <span className="text-sm font-medium text-gray-800">{r.name}</span>
+                                  {r.is_admin && <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-bold text-red-700">Admin</span>}
+                                  {(r as any).is_private && <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-bold text-purple-700">Private</span>}
+                                  {r.is_system && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">Sistem</span>}
+                                </div>
+                                {r.description && (
+                                  <p className="mt-0.5 pl-5 text-[10px] text-gray-400 truncate">{r.description}</p>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-1.5 text-xs text-gray-700">
                         <input type="checkbox" checked={addPrimary} onChange={(e) => setAddPrimary(e.target.checked)} />

@@ -27,6 +27,7 @@ export function DashboardStats() {
   // roleVersion is forwarded to FolderOverviewSection so it refetches on role switch
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'recent' | 'folders'>('recent');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -139,7 +140,41 @@ export function DashboardStats() {
         </div>
       </div>
 
-      {/* Recent Files */}
+      {/* Tab bar */}
+      <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+        <button
+          onClick={() => setActiveTab('recent')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
+            activeTab === 'recent'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          Recent Files
+          {stats.recentFiles.length > 0 && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${activeTab === 'recent' ? 'bg-orange-100 text-orange-600' : 'bg-gray-200 text-gray-500'}`}>
+              {stats.recentFiles.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('folders')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
+            activeTab === 'folders'
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Folder className="h-4 w-4" />
+          Folder Overview
+        </button>
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'folders' ? (
+        <FolderOverviewSection roleVersion={roleVersion} />
+      ) : (
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-2">
           <Clock className="h-5 w-5 text-gray-600" />
@@ -212,8 +247,7 @@ export function DashboardStats() {
         )}
       </div>
 
-      {/* Folder Overview section */}
-      <FolderOverviewSection roleVersion={roleVersion} />
+      )}
     </div>
   );
 }

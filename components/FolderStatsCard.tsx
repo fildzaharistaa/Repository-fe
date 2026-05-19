@@ -10,6 +10,8 @@ import {
   ExternalLink,
   MoreHorizontal,
   ChevronDown,
+  Share2,
+  User,
 } from 'lucide-react';
 import { formatFileSize } from '@/lib/utils/formatters';
 import { useFolderChildren } from '@/hooks/useFolderChildren';
@@ -217,13 +219,43 @@ export function FolderStatsCard(props: Props) {
           </div>
         </div>
 
-        {/* Folder name */}
-        <h3
-          className="text-sm font-semibold text-gray-900 truncate mb-3 leading-snug"
-          title={item.name}
-        >
-          {item.name}
-        </h3>
+        {/* Folder name + shared badge */}
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3
+              className="text-sm font-semibold text-gray-900 truncate leading-snug"
+              title={item.name}
+            >
+              {item.name}
+            </h3>
+            {item.is_shared && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-600 shrink-0">
+                <Share2 className="h-2.5 w-2.5" />
+                Shared
+              </span>
+            )}
+          </div>
+
+          {/* Owner info — only shown for shared folders */}
+          {item.is_shared && item.owner_name && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                <User className="h-2.5 w-2.5 text-gray-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-gray-600 truncate">{item.owner_name}</p>
+                {item.owner_email && (
+                  <p className="text-[10px] text-gray-400 truncate">{item.owner_email}</p>
+                )}
+                {item.owner_role && (
+                  <span className="mt-0.5 inline-block rounded-md bg-gray-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-gray-500">
+                    {item.owner_role}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Stat badges */}
         <div className="flex flex-wrap gap-2 mb-3">
