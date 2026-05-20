@@ -324,25 +324,26 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className={`h-full flex flex-col ${isAdmin ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
-      <div className=" p-4">
+      <div className="p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white/20 backdrop-blur-sm">
             <Image src={logoImage} alt="Logo Sistem Repository" width={40} height={40} className="h-10 w-10 object-contain" priority />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-orange-600 leading-tight">
+            <h2 className={`text-sm font-bold leading-tight ${isAdmin ? 'text-orange-400' : 'text-orange-600'}`}>
               <span className="block">Sistem Repository Kampus</span>
               <span className="block">FIK UPNVJ</span>
             </h2>
-            <p className="text-xs text-orange-500">File Management System</p>
+            <p className={`text-xs ${isAdmin ? 'text-orange-500/70' : 'text-orange-500'}`}>File Management System</p>
           </div>
         </div>
       </div>
 
       {/* Navigation Menu */}
-      <div className="border-b border-gray-200 bg-linear-to-br from-gray-50 to-white p-4">
+      <div className={`border-b p-4 ${isAdmin ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-linear-to-br from-gray-50 to-white'}`}>
+        {isAdmin && <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2 px-1">ADMIN</p>}
         <nav className="space-y-1">
           <button
             onClick={() => {
@@ -351,11 +352,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               setActiveMenu('dashboard');
             }}
             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'dashboard' || (pathname === '/dashboard' && selectedFolderId === null && activeMenu === null)
-              ? 'bg-orange-100 text-orange-700 font-semibold'
-              : 'text-gray-700 hover:bg-gray-100'
+              ? isAdmin ? 'bg-orange-600/20 text-orange-400 font-semibold' : 'bg-orange-100 text-orange-700 font-semibold'
+              : isAdmin ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' : 'text-gray-700 hover:bg-gray-100'
               }`}
           >
-            <LayoutDashboard className="h-5 w-5 text-orange-600" />
+            <LayoutDashboard className={`h-5 w-5 ${isAdmin ? 'text-orange-400' : 'text-orange-600'}`} />
             <span>Dashboard</span>
           </button>
 
@@ -453,36 +454,22 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           )}
           {isAdmin && (
             <>
-              <div className="my-2 border-t border-gray-200"></div>
-              <div className="px-2 py-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Admin</p>
-              </div>
               <button
-                onClick={() => {
-                  router.push('/users');
-                  onFolderSelect(null);
-                  setActiveMenu(null);
-                }}
+                onClick={() => { router.push('/users'); onFolderSelect(null); setActiveMenu(null); }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/users'
-                  ? 'bg-orange-100 text-orange-700 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  ? 'bg-orange-600/20 text-orange-400 font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
               >
-                <Users className="h-5 w-5 text-orange-600" />
+                <Users className="h-5 w-5 text-orange-400" />
                 <span>Users</span>
               </button>
               <button
-                onClick={() => {
-                  router.push('/super-admin');
-                  onFolderSelect(null);
-                  setActiveMenu(null);
-                }}
+                onClick={() => { router.push('/super-admin'); onFolderSelect(null); setActiveMenu(null); }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/super-admin'
-                  ? 'bg-orange-100 text-orange-700 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  ? 'bg-orange-600/20 text-orange-400 font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
               >
-                <Shield className="h-5 w-5 text-orange-600" />
+                <Shield className="h-5 w-5 text-orange-400" />
                 <span>Role Management</span>
               </button>
             </>
@@ -639,6 +626,21 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <Check className="h-4 w-4" />
                 Kirim Request
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin user info at bottom */}
+      {isAdmin && (
+        <div className="mt-auto border-t border-gray-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
+              {user?.name?.[0]?.toUpperCase() ?? 'S'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-200 truncate">{user?.name || 'Super Admin'}</p>
+              <p className="text-[10px] text-gray-500 truncate">{user?.email || ''}</p>
             </div>
           </div>
         </div>
