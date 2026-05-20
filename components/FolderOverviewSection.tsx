@@ -1,6 +1,7 @@
 'use client';
 
-import { Search, RefreshCw, FolderOpen, SlidersHorizontal } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { Search, RefreshCw, FolderOpen, ChevronDown } from 'lucide-react';
 import { useFolderOverview, FolderSortOption } from '@/hooks/useFolderOverview';
 import { FolderStatsCard } from '@/components/FolderStatsCard';
 import { useFolderContext } from '@/context/FolderContext';
@@ -19,6 +20,16 @@ export function FolderOverviewSection({ roleVersion }: Props) {
   const { setSelectedFolderId, setActiveMenu, setVirtualRootFolderId } = useFolderContext();
   const { items, loading, search, setSearch, sortBy, setSortBy, refresh, totalCount } =
     useFolderOverview(roleVersion);
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleOpen = (id: string) => {
     setVirtualRootFolderId(null);
@@ -83,22 +94,39 @@ export function FolderOverviewSection({ roleVersion }: Props) {
           />
         </div>
 
-        {/* Sort select */}
-        <div className="flex items-center gap-2 shrink-0">
-          <SlidersHorizontal className="h-4 w-4 text-gray-400" />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as FolderSortOption)}
-            className="rounded-lg border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm
-                       text-gray-700 focus:bg-white focus:border-orange-400 focus:outline-none
-                       focus:ring-2 focus:ring-orange-100 transition-colors appearance-none cursor-pointer"
+        {/* Sort dropdown */}
+        <div className="relative shrink-0" ref={sortRef}>
+          <button
+            onClick={() => setSortOpen((o) => !o)}
+            className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm transition-all ${
+              sortBy === 'recently-updated'
+                ? 'border-gray-200 bg-white text-gray-700 hover:border-orange-300'
+                : 'border-orange-400 bg-orange-500 text-white'
+            }`}
           >
-            {(Object.keys(SORT_LABELS) as FolderSortOption[]).map((key) => (
-              <option key={key} value={key}>
-                {SORT_LABELS[key]}
-              </option>
-            ))}
-          </select>
+            <span>{SORT_LABELS[sortBy]}</span>
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${sortOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {sortOpen && (
+            <div className="absolute right-0 top-full z-20 mt-2 min-w-[160px] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+              <div className="p-1.5 space-y-0.5">
+                {(Object.keys(SORT_LABELS) as FolderSortOption[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => { setSortBy(key); setSortOpen(false); }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors ${
+                      sortBy === key
+                        ? 'bg-orange-500 text-white'
+                        : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+                    }`}
+                  >
+                    {SORT_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

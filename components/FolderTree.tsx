@@ -22,6 +22,7 @@ import {
   Search,
 } from 'lucide-react';
 import Image from 'next/image';
+import logoImage from '@/app/icon.png';
 import { useFolders } from '@/hooks/useFolders';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useAuthContext } from '@/context/AuthContext';
@@ -327,8 +328,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
       {/* Header Section */}
       <div className=" p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-            <Image src="/upnvj.png" alt="Campus Repository" width={40} height={40} />
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white/20 backdrop-blur-sm">
+            <Image src={logoImage} alt="Logo Sistem Repository" width={40} height={40} className="h-10 w-10 object-contain" priority />
           </div>
           <div>
             <h2 className="text-sm font-bold text-orange-600 leading-tight">
