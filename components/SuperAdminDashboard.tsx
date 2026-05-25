@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Folder, FileText, Users, Upload, Loader2,
   Check, X, HardDrive, ChevronRight,
@@ -129,7 +129,7 @@ export function SuperAdminDashboard() {
 
   // ── Data fetch ────────────────────────────────────────────────────────
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiClient.getSuperAdminStats();
@@ -139,7 +139,7 @@ export function SuperAdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchRoles = async () => {
     try {
@@ -153,7 +153,12 @@ export function SuperAdminDashboard() {
     } catch { /* silent */ }
   };
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  useEffect(() => {
+    window.addEventListener('folder-stats-changed', fetchStats);
+    return () => window.removeEventListener('folder-stats-changed', fetchStats);
+  }, [fetchStats]);
 
   useEffect(() => {
     const fetchHierarchy = async () => {
@@ -268,27 +273,28 @@ export function SuperAdminDashboard() {
           {(() => {
             // Merge: start from ALL roles in usersPerRole, then join storage data
             const storageMap = new Map(storagePerUnit.map(u => [u.unit, parseInt(u.totalSize || '0')]));
-            // Build unified list of ALL roles with their storage
+            const maxStoragePerUser = stats.maxStoragePerUser || 104857600;
+            // Build unified list of ALL roles with their storage and quota
             const allRoleUnits = stats.usersPerRole.map((r, idx) => ({
               name: r.roleName,
               storage: storageMap.get(r.roleName) || 0,
+              quota: maxStoragePerUser * (parseInt(r.count || '0') || 1),
               color: getRoleColor(r.roleName, idx),
             }));
             // Add any storagePerUnit entries not in usersPerRole
             storagePerUnit.forEach((u, idx) => {
               if (!allRoleUnits.find(r => r.name === u.unit)) {
-                allRoleUnits.push({ name: u.unit, storage: parseInt(u.totalSize || '0'), color: getRoleColor(u.unit, idx + allRoleUnits.length) });
+                allRoleUnits.push({ name: u.unit, storage: parseInt(u.totalSize || '0'), quota: maxStoragePerUser, color: getRoleColor(u.unit, idx + allRoleUnits.length) });
               }
             });
-            const maxStorageVal = Math.max(...allRoleUnits.map(r => r.storage), 1);
             const BAR_H = 120; // px
 
             return (
               <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent pb-2">
                 <div className="flex items-end gap-3" style={{ height: `${BAR_H + 48}px`, minWidth: `${allRoleUnits.length * 80}px` }}>
                   {allRoleUnits.map((r) => {
-                    const pct = Math.round((r.storage / maxStorageVal) * 100);
-                    const barPx = Math.max(Math.round((r.storage / maxStorageVal) * BAR_H), r.storage > 0 ? 4 : 0);
+                    const pct = Math.min(Math.round((r.storage / r.quota) * 100), 100);
+                    const barPx = Math.max(Math.round((pct / 100) * BAR_H), r.storage > 0 ? 4 : 0);
                     return (
                       <div key={r.name} className="flex flex-col items-center gap-1 w-20 shrink-0">
                         <span className="text-[11px] font-semibold" style={{ color: r.color }}>{pct}%</span>
