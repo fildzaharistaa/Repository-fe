@@ -11,10 +11,16 @@ import { SharedFilesView } from '@/components/SharedFilesView';
 import { RecycleBinView } from '@/components/RecycleBinView';
 import { useFolderContext } from '@/context/FolderContext';
 import { useAuthContext } from '@/context/AuthContext';
+import { useMemo } from 'react';
 
 function DashboardContent() {
   const { selectedFolderId, activeMenu } = useFolderContext();
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, user } = useAuthContext();
+
+  const dateLabel = useMemo(() =>
+    new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+  []);
+
 
   // If a folder is selected, show file list
   if (selectedFolderId) {
@@ -39,7 +45,15 @@ function DashboardContent() {
               <SuperAdminDashboard />
             ) : (
               <>
-                <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard</h1>
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                    <p className="mt-0.5 text-sm text-gray-500">Selamat datang, {user?.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">{dateLabel}</p>
+                  </div>
+                </div>
                 <DashboardStats />
               </>
             )}
@@ -76,7 +90,15 @@ function DashboardContent() {
               <SuperAdminDashboard />
             ) : (
               <>
-                <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard</h1>
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                    <p className="mt-0.5 text-sm text-gray-500">Selamat datang, {user?.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">{dateLabel}</p>
+                  </div>
+                </div>
                 <DashboardStats />
               </>
             )}
