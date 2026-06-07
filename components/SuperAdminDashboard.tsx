@@ -60,6 +60,7 @@ interface Stats {
   totalSize: number;
   maxFolderDepth: number;
   maxStoragePerUser: number;
+  maxUploadSize: number;
   foldersPerUnit: Array<{ unit: string; count: string }>;
   storagePerUnit: Array<{ unit: string; totalSize: string }>;
   usersPerRole: Array<{ roleName: string; count: string }>;
@@ -242,12 +243,13 @@ export function SuperAdminDashboard() {
       </div>
 
       {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {[
           { label: 'Total Role', value: stats.totalRoles, sub: 'Peran sistem aktif', icon: Users, color: 'orange', border: 'border-l-orange-500' },
           { label: 'Total Folder', value: stats.totalFolders, sub: '+2 bulan ini', icon: Folder, color: 'blue', border: 'border-l-blue-500' },
           { label: 'Total File', value: stats.totalFiles, sub: 'File diunggah', icon: FileText, color: 'green', border: 'border-l-green-500' },
           { label: 'Total Storage', value: formatSize(stats.totalSize), sub: `Dari ${formatSize(stats.maxStoragePerUser || 104857600)} limit`, icon: HardDrive, color: 'purple', border: 'border-l-purple-500' },
+          { label: 'Upload Limit', value: `${Math.round((stats.maxUploadSize || 5242880) / (1024 * 1024))} MB`, sub: 'Batas upload saat ini', icon: Upload, color: 'orange', border: 'border-l-orange-400' },
         ].map((card) => (
           <div key={card.label} className={`rounded-xl border border-gray-200 border-l-4 ${card.border} bg-white p-5 shadow-sm`}>
             <div className="flex items-start justify-between">
