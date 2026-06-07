@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  Image as ImageIcon, 
-  Video, 
-  Music, 
-  AlertCircle, 
-  Loader2, 
+import {
+  FileText,
+  Image as ImageIcon,
+  Video,
+  Music,
+  AlertCircle,
+  Loader2,
   Download,
   Info
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
+import { useAuthContext } from '@/context/AuthContext';
 import { File as FileEntity } from '@/types';
 
 interface FilePreviewProps {
@@ -19,6 +20,7 @@ interface FilePreviewProps {
 }
 
 export function FilePreview({ file }: FilePreviewProps) {
+  const { hasPermission } = useAuthContext();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<{
@@ -41,7 +43,7 @@ export function FilePreview({ file }: FilePreviewProps) {
         if (mimeType.includes('pdf')) {
           let url = apiClient.getPreviewUrl(file.id);
           // Hide toolbar (download/print) if user doesn't have download permission
-          if (file.can_download === false) {
+          if (!hasPermission('file.download')) {
             url += '#toolbar=0&navpanes=0';
           }
           setPreviewContent({ type: 'pdf', url });
@@ -219,16 +221,18 @@ export function FilePreview({ file }: FilePreviewProps) {
           Maaf, format file <strong>{file.mime_type}</strong> belum didukung untuk preview langsung di browser.
         </p>
         <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
-          <button
-            onClick={handleDownload}
-            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all"
-          >
-            <Download className="h-4 w-4" />
-            Unduh File Sekarang
-          </button>
+          {hasPermission('file.download') && (
+            <button
+              onClick={handleDownload}
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all"
+            >
+              <Download className="h-4 w-4" />
+              Unduh File Sekarang
+            </button>
+          )}
           <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700 flex items-start gap-2 text-left">
             <Info className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>Anda tetap dapat mengunduh file ini untuk membukanya di aplikasi desktop Anda.</span>
+            <span>Format file ini belum didukung untuk preview langsung di browser.</span>
           </div>
         </div>
       </div>

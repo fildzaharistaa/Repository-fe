@@ -41,12 +41,12 @@ export function FileList({ folderId }: FileListProps) {
   const { user } = useAuth();
   const { isAdmin, hasPermission } = useAuthContext();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
-  const [canDownload, setCanDownload] = useState(true);
   const [folderPermissions, setFolderPermissions] = useState<any[]>([]);
 
   // Edit rights now come from dynamic permission slugs; legacy 'dosen/tendik' fallback retained for backward compat.
   const canUpload = hasPermission('file.upload');
   const canDelete = hasPermission('file.delete');
+  const canDownload = hasPermission('file.download');
   const legacyDosenTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
   const hasEditRights = isOwnerOrAdmin || canUpload || canDelete || legacyDosenTendik;
 
@@ -60,20 +60,6 @@ export function FileList({ folderId }: FileListProps) {
           const ownerOrAdmin = user?.id === ownerId || isAdmin;
           setIsOwnerOrAdmin(ownerOrAdmin);
 
-          // Check if current user has download permission for this folder
-          if (ownerOrAdmin) {
-            setCanDownload(true);
-          } else if (folder.permissions && user) {
-            const userRoleId = typeof user.role === 'object' ? user.role?.id : null;
-            const hasDownload = folder.permissions.some((p: any) =>
-              (p.user_id === user.id && p.can_download) ||
-              (p.role_id && p.role_id === userRoleId && p.can_download)
-            );
-            setCanDownload(hasDownload);
-          } else {
-            setCanDownload(false);
-          }
-
           // Sort subfolders by name
           const sortedSubfolders = (folder.children || []).sort((a: any, b: any) => a.name.localeCompare(b.name));
           setSubfolders(sortedSubfolders);
@@ -85,14 +71,12 @@ export function FileList({ folderId }: FileListProps) {
           console.error('Failed to fetch folder info', err);
           setSubfolders([]);
           setIsOwnerOrAdmin(false);
-          setCanDownload(false);
           setFolderPermissions([]);
         });
     } else {
       setFolderName(null);
       setSubfolders([]);
       setIsOwnerOrAdmin(true);
-      setCanDownload(true);
     }
   };
 

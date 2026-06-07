@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Clock, FileText, Download, Eye, Trash2, Folder, X } from 'lucide-react';
+import { useAuthContext } from '@/context/AuthContext';
 import { useFolders } from '@/hooks/useFolders';
 import { useAllFiles } from '@/hooks/useAllFiles';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
@@ -12,6 +13,7 @@ import { handleApiError } from '@/lib/utils/errorHandler';
 import type { File } from '@/types';
 
 export function RecentFilesView() {
+  const { hasPermission } = useAuthContext();
   const { folders } = useFolders(false);
   const { allFiles, fileFolderMap, loading, error } = useAllFiles(folders);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -168,14 +170,16 @@ export function RecentFilesView() {
                         <Eye className="h-3.5 w-3.5" />
                         View
                       </button>
-                      <button
-                        onClick={() => handleDownload(file)}
-                        className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
-                        title="Download"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        Download
-                      </button>
+                      {hasPermission('file.download') && (
+                        <button
+                          onClick={() => handleDownload(file)}
+                          className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
+                          title="Download"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Download
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(file)}
                         className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
