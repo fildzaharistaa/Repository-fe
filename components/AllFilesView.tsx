@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 type FilterTab = 'my-files' | 'shared-files';
 
 export function AllFilesView() {
-  const { user, roleVersion } = useAuthContext();
+  const { user, roleVersion, hasPermission } = useAuthContext();
   const { folders } = useFolders(false);
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
 
@@ -335,7 +335,7 @@ export function AllFilesView() {
                         >
                           <Eye className="h-3.5 w-3.5" /> View
                         </button>
-                        {(!isShared || file.can_download !== false) && (
+                        {hasPermission('file.download') && (
                           <button
                             onClick={() => handleDownload(file, isShared)}
                             className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
@@ -383,7 +383,7 @@ export function AllFilesView() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {(!activeTab.includes('shared') || selectedFile.can_download !== false) && (
+                {hasPermission('file.download') && (
                   <button
                     onClick={() => handleDownload(selectedFile, activeTab === 'shared-files')}
                     className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition-all"
