@@ -101,6 +101,14 @@ export function FileList({ folderId }: FileListProps) {
     setUploaderSearch(''); // reset search when folder changes
   }, [folderId, user]);
 
+  const [maxUploadSize, setMaxUploadSize] = useState(5 * 1024 * 1024);
+
+  useEffect(() => {
+    apiClient.getSettings()
+      .then((s) => { if (s.max_upload_size) setMaxUploadSize(parseInt(s.max_upload_size, 10)); })
+      .catch(() => {});
+  }, []);
+
   const [showQuickView, setShowQuickView] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -395,8 +403,9 @@ export function FileList({ folderId }: FileListProps) {
       let errorFiles: string[] = [];
       let successCount = 0;
 
+      const maxMB = Math.round(maxUploadSize / (1024 * 1024));
       for (let i = 0; i < files.length; i++) {
-        if (files[i].size > 5 * 1024 * 1024) {
+        if (files[i].size > maxUploadSize) {
           errorFiles.push(files[i].name);
           continue;
         }
@@ -406,8 +415,8 @@ export function FileList({ folderId }: FileListProps) {
 
       if (errorFiles.length > 0) {
         const errorMsg = errorFiles.length === 1
-          ? `File "${errorFiles[0]}" gagal diunggah karena melebihi batas maksimum 5MB.`
-          : `${errorFiles.length} file gagal diunggah karena melebihi batas maksimum 5MB.`;
+          ? `File "${errorFiles[0]}" gagal diunggah karena melebihi batas maksimum ${maxMB}MB.`
+          : `${errorFiles.length} file gagal diunggah karena melebihi batas maksimum ${maxMB}MB.`;
 
         toast.error(errorMsg);
 

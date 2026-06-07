@@ -10,6 +10,7 @@ import {
   Users,
   Lock,
   Shield,
+  Settings,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -333,10 +334,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           </div>
           <div>
             <h2 className={`text-sm font-bold leading-tight ${isAdmin ? 'text-orange-400' : 'text-orange-600'}`}>
-              <span className="block">Sistem Repository Kampus</span>
-              <span className="block">FIK UPNVJ</span>
+              <span className="block">Sistem Management Repository</span>
             </h2>
-            <p className={`text-xs ${isAdmin ? 'text-orange-500/70' : 'text-orange-500'}`}>File Management System</p>
           </div>
         </div>
       </div>
@@ -472,6 +471,17 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                 <Shield className="h-5 w-5 text-orange-400" />
                 <span>Role Management</span>
               </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => { router.push('/system-settings'); onFolderSelect(null); setActiveMenu(null); }}
+                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/system-settings'
+                    ? 'bg-orange-600/20 text-orange-400 font-semibold'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
+                >
+                  <Settings className="h-5 w-5 text-orange-400" />
+                  <span>System Settings</span>
+                </button>
+              )}
             </>
           )}
         </nav>
