@@ -278,20 +278,28 @@ export default function SharePage() {
             </div>
             <div className="flex-1 overflow-hidden">
               {isPdf(effectiveMime) && (
-                <embed src={viewUrl} type="application/pdf" className="h-full w-full" />
+                <iframe
+                  src={`${viewUrl}#toolbar=0&navpanes=0`}
+                  className="h-full w-full border-0"
+                  title={info.item_name}
+                />
               )}
               {isImage(effectiveMime) && (
-                <div className="flex h-full items-center justify-center bg-gray-50 p-4">
+                <div className="flex h-full items-center justify-center bg-gray-50 p-4 overflow-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={viewUrl} alt={info.item_name} className="max-h-full max-w-full object-contain rounded-lg" />
                 </div>
               )}
               {isOfficeDoc(effectiveMime) && (
-                <iframe
-                  src={officeViewerUrl}
-                  className="h-full w-full border-0"
-                  title={info.item_name}
-                />
+                <div className="relative h-full w-full">
+                  <iframe
+                    src={officeViewerUrl}
+                    className="h-full w-full border-0"
+                    title={info.item_name}
+                  />
+                  {/* Block MS Office viewer toolbar to prevent download */}
+                  <div className="pointer-events-auto absolute inset-x-0 top-0 h-12 bg-white z-10 select-none" />
+                </div>
               )}
             </div>
           </div>
