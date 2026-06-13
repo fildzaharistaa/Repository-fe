@@ -209,7 +209,7 @@ export function SharedFilesView() {
                           >
                             <Eye className="h-3.5 w-3.5" /> View
                           </button>
-                          {hasPermission('file.download') && (
+                          {(file.can_download && hasPermission('file.download')) && (
                             <button
                               onClick={() => handleDownload(file)}
                               className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
@@ -324,7 +324,7 @@ export function SharedFilesView() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {hasPermission('file.download') && (
+                {(selectedFile?.can_download && hasPermission('file.download')) && (
                   <button
                     onClick={() => handleDownload(selectedFile)}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-all"
