@@ -166,7 +166,7 @@ export default function SharePage() {
 
   const isFile = info.item_type === 'file';
   const effectiveMime = detectMime(info.mime_type, info.item_name);
-  const canPreviewInline = isImage(effectiveMime) || isPdf(effectiveMime) || isOfficeDoc(effectiveMime);
+  const canPreviewInline = info.permission === 'download' && (isImage(effectiveMime) || isPdf(effectiveMime) || isOfficeDoc(effectiveMime));
   // Office docs use Microsoft Online Viewer; PDF/image use direct viewUrl
   const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(viewUrl)}`;
 
@@ -291,15 +291,11 @@ export default function SharePage() {
                 </div>
               )}
               {isOfficeDoc(effectiveMime) && (
-                <div className="relative h-full w-full">
-                  <iframe
-                    src={officeViewerUrl}
-                    className="h-full w-full border-0"
-                    title={info.item_name}
-                  />
-                  {/* Block MS Office viewer toolbar to prevent download */}
-                  <div className="pointer-events-auto absolute inset-x-0 top-0 h-12 bg-white z-10 select-none" />
-                </div>
+                <iframe
+                  src={officeViewerUrl}
+                  className="h-full w-full border-0"
+                  title={info.item_name}
+                />
               )}
             </div>
           </div>
