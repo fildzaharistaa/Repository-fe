@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/context/AuthContext';
 import { handleApiError } from '@/lib/utils/errorHandler';
 
@@ -13,6 +13,7 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuthContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -21,7 +22,8 @@ export function Login() {
 
     try {
       await login(email, password);
-      router.push('/dashboard');
+      const redirect = searchParams.get('redirect');
+      router.push(redirect && redirect.startsWith('/') ? redirect : '/dashboard');
     } catch (err) {
       setError(handleApiError(err));
     } finally {

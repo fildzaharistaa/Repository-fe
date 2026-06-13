@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuthContext } from '@/context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -24,6 +24,8 @@ export function ProtectedRoute({
   const { user, loading, isAdmin, isSuperAdmin, hasPermission, hasAnyPermission, hasRole } =
     useAuthContext();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const blocked = (() => {
     if (!user) return false; // handled separately
@@ -38,11 +40,12 @@ export function ProtectedRoute({
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.push('/login');
+      const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
+      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
     } else if (blocked) {
       router.push('/dashboard');
     }
-  }, [user, loading, blocked, router]);
+  }, [user, loading, blocked, router, pathname, searchParams]);
 
   if (loading) {
     return (

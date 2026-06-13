@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { FileList } from '@/app/dashboard/components/FileList';
 import { DashboardStats } from '@/components/DashboardStats';
@@ -13,8 +15,16 @@ import { useFolderContext } from '@/context/FolderContext';
 import { useAuthContext } from '@/context/AuthContext';
 
 function DashboardContent() {
-  const { selectedFolderId, activeMenu } = useFolderContext();
+  const { selectedFolderId, setSelectedFolderId, activeMenu } = useFolderContext();
   const { isAdmin } = useAuthContext();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const folderId = searchParams.get('folderId');
+    if (folderId) {
+      setSelectedFolderId(folderId);
+    }
+  }, [searchParams, setSelectedFolderId]);
 
   // If a folder is selected, show file list
   if (selectedFolderId) {
