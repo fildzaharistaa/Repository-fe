@@ -220,6 +220,7 @@ export interface ShareLinkPublicInfo {
   item_id: string;
   item_name: string;
   item_size?: number;
+  mime_type?: string;
   shared_by: string;
   shared_by_email: string;
   access_level: ShareAccessLevel;
