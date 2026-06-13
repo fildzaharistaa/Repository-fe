@@ -238,8 +238,64 @@ export function DynamicRoleManager() {
           {search ? `Tidak ada role cocok dengan "${search}"` : filter === 'inactive' ? 'Tidak ada role nonaktif.' : 'Belum ada role.'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredRoles.map((r) => (
+        <div className="space-y-6">
+          {/* Pinned: Admin roles always on top */}
+          {filteredRoles.some((r) => r.is_admin) && (
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-red-500" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-red-500">Administrator</span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredRoles.filter((r) => r.is_admin).map((r) => (
+                  <div
+                    key={r.id}
+                    className={`flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md border-red-200 ring-1 ring-red-100 ${r.is_active === false ? 'opacity-60' : ''}`}
+                  >
+                    {/* Avatar + name */}
+                    <div className="flex items-start gap-3 p-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm" style={{ backgroundColor: r.color || '#94a3b8' }}>
+                        {getInitials(r.name) || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-gray-900">{r.name}</p>
+                        {r.description ? <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{r.description}</p> : <p className="mt-0.5 text-xs italic text-gray-400">Tidak ada deskripsi</p>}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 px-4 pb-3">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700"><ShieldCheck className="h-2.5 w-2.5" /> Admin Penuh</span>
+                      {r.is_system && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700"><Shield className="h-2.5 w-2.5" /> Sistem</span>}
+                      {r.is_active === false && <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold text-gray-600">Nonaktif</span>}
+                    </div>
+                    <div className="flex items-center gap-2 border-t border-gray-100 px-4 py-2.5">
+                      {r.category ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">{r.category}</span> : <span className="text-[10px] italic text-gray-400">Tanpa kategori</span>}
+                      <span className="text-gray-300">•</span>
+                      <span className="text-[10px] text-gray-500">Level <span className="font-semibold text-gray-700">{r.hierarchy_level ?? 0}</span></span>
+                    </div>
+                    <div className="flex items-center justify-end gap-1 border-t border-gray-100 bg-gray-50 px-3 py-2">
+                      <button onClick={() => openEdit(r)} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"><Edit2 className="h-3.5 w-3.5" /> Edit</button>
+                      <button onClick={() => { setCloneSrc(r); setCloneName(`${r.name} Copy`); }} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"><Copy className="h-3.5 w-3.5" /> Duplikasi</button>
+                      <button onClick={() => remove(r)} disabled={!!r.is_system} title={r.is_system ? 'Role sistem tidak bisa dihapus' : 'Hapus'} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-30"><Trash2 className="h-3.5 w-3.5" /> Hapus</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Divider if both sections exist */}
+          {filteredRoles.some((r) => r.is_admin) && filteredRoles.some((r) => !r.is_admin) && (
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Role Lainnya</span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+          )}
+
+          {/* Regular roles */}
+          {filteredRoles.some((r) => !r.is_admin) && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredRoles.filter((r) => !r.is_admin).map((r) => (
             <div
               key={r.id}
               className={`flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md border-gray-200 ${r.is_active === false ? 'opacity-60' : ''}`}
@@ -318,6 +374,9 @@ export function DynamicRoleManager() {
               </div>
             </div>
           ))}
+          </div>
+          )}
+
         </div>
       )}
 

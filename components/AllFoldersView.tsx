@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Folder, FolderOpen, Share2, User, Mail } from 'lucide-react';
+import { Folder, FolderOpen, Share2, User, Mail, Link2 } from 'lucide-react';
 import { useFolders } from '@/hooks/useFolders';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useFolderContext } from '@/context/FolderContext';
 import { useAuthContext } from '@/context/AuthContext';
-import type { FolderTreeNode } from '@/types';
+import type { FolderTreeNode, ShareItemType } from '@/types';
+import { ShareLinkModal } from './ShareLinkModal';
 
 type FilterTab = 'my-folders' | 'shared-folders';
 
@@ -16,6 +17,10 @@ export function AllFoldersView() {
   const { folders, loading, error } = useFolders(false, roleVersion);
   const { folders: sharedFolders, loading: sharedLoading, error: sharedError } = useSharedFolders(roleVersion);
   const [activeTab, setActiveTab] = useState<FilterTab>(canCreateFolder ? 'my-folders' : 'shared-folders');
+
+  // Share Link modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkTarget, setShareLinkTarget] = useState<{ id: string; name: string; type: ShareItemType } | null>(null);
   
   // Only show parent (root) folders — subfolders appear when user clicks into a parent
   const parentFolders = folders;
@@ -128,7 +133,7 @@ export function AllFoldersView() {
             const isShared = activeTab === 'shared-folders';
             
             return (
-              <button
+              <div
                 key={folder.id}
                 onClick={() => {
                   if (isShared) {
@@ -138,7 +143,7 @@ export function AllFoldersView() {
                   }
                   setSelectedFolderId(folder.id);
                 }}
-                className={`group relative rounded-xl border-2 p-5 text-left transition-all hover:shadow-lg ${
+                className={`group relative rounded-xl border-2 p-5 text-left transition-all hover:shadow-lg cursor-pointer ${
                   isSelected
                     ? 'border-orange-500 bg-orange-50 shadow-md'
                     : isShared
@@ -146,6 +151,20 @@ export function AllFoldersView() {
                       : 'border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50/50'
                 }`}
               >
+                {/* Share Link overlay button — only for own folders */}
+                {!isShared && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShareLinkTarget({ id: folder.id, name: folder.name, type: 'folder' });
+                      setShowShareLinkModal(true);
+                    }}
+                    className="absolute right-3 top-3 z-10 hidden rounded-lg bg-orange-100 p-1.5 text-orange-600 hover:bg-orange-200 group-hover:flex items-center"
+                    title="Share Link"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 {/* Folder Icon */}
                 <div className="mb-3 flex items-center justify-between">
                   <div className={`rounded-lg p-2.5 ${
@@ -211,10 +230,20 @@ export function AllFoldersView() {
                     <div className="h-2.5 w-2.5 rounded-full bg-orange-600 shadow-sm"></div>
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
+      )}
+
+      {shareLinkTarget && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkTarget(null); }}
+          itemType={shareLinkTarget.type}
+          itemId={shareLinkTarget.id}
+          itemName={shareLinkTarget.name}
+        />
       )}
     </div>
   );

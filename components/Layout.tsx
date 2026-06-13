@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import { FolderTree } from '@/components/FolderTree';
@@ -16,7 +16,7 @@ const SIDEBAR_DEFAULT = 288;
 const SIDEBAR_STORAGE_KEY = 'sidebar_width';
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user, logout, activeRole } = useAuthContext();
+  const { user, logout } = useAuthContext();
   const router = useRouter();
   const { selectedFolderId, setSelectedFolderId, setVirtualRootFolderId } = useFolderContext();
 

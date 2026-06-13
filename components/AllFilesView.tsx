@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { FileText, Download, Eye, Trash2, X, Folder, Share2, Mail, User, Clock, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { FileText, Download, Eye, Trash2, X, Folder, Share2, Mail, User, Clock, Loader2, ChevronDown, Link2 } from 'lucide-react';
 import { useFolders } from '@/hooks/useFolders';
 import { useAllFiles } from '@/hooks/useAllFiles';
 import { useSharedFiles } from '@/hooks/useSharedFiles';
@@ -13,12 +13,14 @@ import { FilePreview } from './FilePreview';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { File as FileEntity } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
+import { ShareLinkModal } from './ShareLinkModal';
+import type { ShareItemType } from '@/types';
 import toast from 'react-hot-toast';
 
 type FilterTab = 'my-files' | 'shared-files';
 
 export function AllFilesView() {
-  const { user, roleVersion } = useAuthContext();
+  const { user, roleVersion, hasPermission } = useAuthContext();
   const { folders } = useFolders(false);
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
 
@@ -34,10 +36,25 @@ export function AllFilesView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  // Share Link modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkTarget, setShareLinkTarget] = useState<{ id: string; name: string; type: ShareItemType } | null>(null);
   const { deleteFile: deleteMyFile } = useFiles(selectedFolderId);
 
   // Filter state for shared files
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node))
+        setRoleDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
   const uniqueRoles = Array.from(new Set(sharedFiles.map((f: any) => f.owner_role).filter(Boolean)));
   const filteredSharedFiles = sharedFiles.filter((f: any) => 
     roleFilter === 'all' || f.owner_role === roleFilter
@@ -135,18 +152,40 @@ export function AllFilesView() {
 
         {activeTab === 'shared-files' && uniqueRoles.length > 0 && (
           <div className="flex items-center gap-2">
-            <label htmlFor="role-filter-files" className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter by Role:</label>
-            <select
-              id="role-filter-files"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all shadow-sm"
-            >
-              <option value="all">All Roles</option>
-              {uniqueRoles.map((role: any) => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400 whitespace-nowrap">Filter Role</span>
+            <div className="relative" ref={roleDropdownRef}>
+              <button
+                onClick={() => setRoleDropdownOpen((o) => !o)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm transition-all ${
+                  roleFilter === 'all'
+                    ? 'border-gray-200 bg-white text-gray-700 hover:border-orange-300'
+                    : 'border-orange-400 bg-orange-500 text-white'
+                }`}
+              >
+                <span>{roleFilter === 'all' ? 'Semua Role' : roleFilter}</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${roleDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {roleDropdownOpen && (
+                <div className="absolute right-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+                  <div className="p-1.5 space-y-0.5">
+                    {[{ value: 'all', label: 'Semua Role' }, ...uniqueRoles.map((r: any) => ({ value: r, label: r }))].map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => { setRoleFilter(value); setRoleDropdownOpen(false); }}
+                        className={`w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors ${
+                          roleFilter === value
+                            ? 'bg-orange-500 text-white'
+                            : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -302,12 +341,20 @@ export function AllFilesView() {
                         >
                           <Eye className="h-3.5 w-3.5" /> View
                         </button>
-                        {(!isShared || file.can_download !== false) && (
+                        {hasPermission('file.download') && (
                           <button
                             onClick={() => handleDownload(file, isShared)}
                             className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 transition-all hover:shadow-sm"
                           >
                             <Download className="h-3.5 w-3.5" /> Download
+                          </button>
+                        )}
+                        {!isShared && (
+                          <button
+                            onClick={() => { setShareLinkTarget({ id: file.id, name: file.name, type: 'file' }); setShowShareLinkModal(true); }}
+                            className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"
+                          >
+                            <Link2 className="h-3.5 w-3.5" /> Link
                           </button>
                         )}
                         {!isShared && (
@@ -350,7 +397,7 @@ export function AllFilesView() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {(!activeTab.includes('shared') || selectedFile.can_download !== false) && (
+                {hasPermission('file.download') && (
                   <button
                     onClick={() => handleDownload(selectedFile, activeTab === 'shared-files')}
                     className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition-all"
@@ -384,6 +431,16 @@ export function AllFilesView() {
         }}
         onConfirm={confirmDelete}
       />
+
+      {shareLinkTarget && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkTarget(null); }}
+          itemType={shareLinkTarget.type}
+          itemId={shareLinkTarget.id}
+          itemName={shareLinkTarget.name}
+        />
+      )}
     </div>
   );
 }

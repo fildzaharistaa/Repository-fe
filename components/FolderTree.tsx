@@ -10,6 +10,7 @@ import {
   Users,
   Lock,
   Shield,
+  Settings,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -20,14 +21,17 @@ import {
   Trash2,
   Edit2,
   Search,
+  Link2,
 } from 'lucide-react';
 import Image from 'next/image';
+import logoImage from '@/app/icon.png';
 import { useFolders } from '@/hooks/useFolders';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
 import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
+import { ShareLinkModal } from './ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import toast from 'react-hot-toast';
 import { FolderModal } from '@/components/FolderModal';
@@ -40,6 +44,7 @@ interface FolderItemProps {
   onCreateSubfolder: (parentId: string) => void;
   onEdit: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onShareLink: (id: string, name: string) => void;
   depth: number;
   maxDepth: number;
   canCreateSubfolder: boolean;
@@ -52,6 +57,7 @@ function FolderItem({
   onCreateSubfolder,
   onEdit,
   onDelete,
+  onShareLink,
   depth,
   canCreateSubfolder,
   maxDepth
@@ -139,6 +145,16 @@ function FolderItem({
           >
             <X className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShareLink(folder.id, folder.name);
+            }}
+            className="rounded px-2 py-1 text-xs text-orange-600 hover:bg-orange-50"
+            title="Share Link"
+          >
+            <Link2 className="h-3 w-3" />
+          </button>
         </div>
       </div>
       {expanded && hasChildren && (
@@ -152,6 +168,7 @@ function FolderItem({
               onCreateSubfolder={onCreateSubfolder}
               onEdit={onEdit}
               onDelete={onDelete}
+              onShareLink={onShareLink}
               depth={depth + 1}
               maxDepth={maxDepth}
               canCreateSubfolder={canCreateSubfolder}
@@ -221,6 +238,15 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showHierarchyModal, setShowHierarchyModal] = useState(false);
   const [requestedDepth, setRequestedDepth] = useState(6);
   const [hierarchyMessage, setHierarchyMessage] = useState('');
+
+  // Share Link modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkTarget, setShareLinkTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const handleShareLinkFolder = (id: string, name: string) => {
+    setShareLinkTarget({ id, name });
+    setShowShareLinkModal(true);
+  };
 
   // Fetch user stats on mount to get correct maxFolderDepth
   useEffect(() => {
@@ -323,25 +349,24 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className={`h-full flex flex-col ${isAdmin ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
-      <div className=" p-4">
+      <div className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-            <Image src="/upnvj.png" alt="Campus Repository" width={40} height={40} />
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/20 backdrop-blur-sm">
+            <Image src={logoImage} alt="Logo Sistem Repository" width={40} height={40} className="h-10 w-10 object-contain" priority />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-orange-600 leading-tight">
-              <span className="block">Sistem Repository Kampus</span>
-              <span className="block">FIK UPNVJ</span>
+            <h2 className={`text-sm font-bold leading-tight ${isAdmin ? 'text-orange-400' : 'text-orange-600'}`}>
+              <span className="block">Sistem Management Repository</span>
             </h2>
-            <p className="text-xs text-orange-500">File Management System</p>
           </div>
         </div>
       </div>
 
       {/* Navigation Menu */}
-      <div className="border-b border-gray-200 bg-linear-to-br from-gray-50 to-white p-4">
+      <div className={`border-b p-4 ${isAdmin ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-linear-to-br from-gray-50 to-white'}`}>
+        {isAdmin && <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2 px-1">ADMIN</p>}
         <nav className="space-y-1">
           <button
             onClick={() => {
@@ -350,11 +375,11 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
               setActiveMenu('dashboard');
             }}
             className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${activeMenu === 'dashboard' || (pathname === '/dashboard' && selectedFolderId === null && activeMenu === null)
-              ? 'bg-orange-100 text-orange-700 font-semibold'
-              : 'text-gray-700 hover:bg-gray-100'
+              ? isAdmin ? 'bg-orange-600/20 text-orange-400 font-semibold' : 'bg-orange-100 text-orange-700 font-semibold'
+              : isAdmin ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' : 'text-gray-700 hover:bg-gray-100'
               }`}
           >
-            <LayoutDashboard className="h-5 w-5 text-orange-600" />
+            <LayoutDashboard className={`h-5 w-5 ${isAdmin ? 'text-orange-400' : 'text-orange-600'}`} />
             <span>Dashboard</span>
           </button>
 
@@ -452,38 +477,35 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
           )}
           {isAdmin && (
             <>
-              <div className="my-2 border-t border-gray-200"></div>
-              <div className="px-2 py-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Admin</p>
-              </div>
               <button
-                onClick={() => {
-                  router.push('/users');
-                  onFolderSelect(null);
-                  setActiveMenu(null);
-                }}
+                onClick={() => { router.push('/users'); onFolderSelect(null); setActiveMenu(null); }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/users'
-                  ? 'bg-orange-100 text-orange-700 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  ? 'bg-orange-600/20 text-orange-400 font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
               >
-                <Users className="h-5 w-5 text-orange-600" />
+                <Users className="h-5 w-5 text-orange-400" />
                 <span>Users</span>
               </button>
               <button
-                onClick={() => {
-                  router.push('/super-admin');
-                  onFolderSelect(null);
-                  setActiveMenu(null);
-                }}
+                onClick={() => { router.push('/super-admin'); onFolderSelect(null); setActiveMenu(null); }}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/super-admin'
-                  ? 'bg-orange-100 text-orange-700 font-semibold'
-                  : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  ? 'bg-orange-600/20 text-orange-400 font-semibold'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
               >
-                <Shield className="h-5 w-5 text-orange-600" />
+                <Shield className="h-5 w-5 text-orange-400" />
                 <span>Role Management</span>
               </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => { router.push('/system-settings'); onFolderSelect(null); setActiveMenu(null); }}
+                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${pathname === '/system-settings'
+                    ? 'bg-orange-600/20 text-orange-400 font-semibold'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
+                >
+                  <Settings className="h-5 w-5 text-orange-400" />
+                  <span>System Settings</span>
+                </button>
+              )}
             </>
           )}
         </nav>
@@ -524,6 +546,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onCreateSubfolder={handleCreateSubfolder}
                   onEdit={handleEditFolder}
                   onDelete={handleDeleteFolder}
+                  onShareLink={handleShareLinkFolder}
                   depth={1}
                   maxDepth={maxFolderDepth}
                   canCreateSubfolder={canCreateSubfolder}
@@ -641,6 +664,31 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             </div>
           </div>
         </div>
+      )}
+
+      {/* Admin user info at bottom */}
+      {isAdmin && (
+        <div className="mt-auto border-t border-gray-700 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
+              {user?.name?.[0]?.toUpperCase() ?? 'S'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-200 truncate">{user?.name || 'Super Admin'}</p>
+              <p className="text-[10px] text-gray-500 truncate">{user?.email || ''}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shareLinkTarget && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkTarget(null); }}
+          itemType="folder"
+          itemId={shareLinkTarget.id}
+          itemName={shareLinkTarget.name}
+        />
       )}
     </div>
   );

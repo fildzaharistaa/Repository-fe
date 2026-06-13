@@ -37,6 +37,7 @@ export function useFolders(adminMode = false, roleVersion = 0) {
         user_permissions: userPermissions,
       });
       await fetchFolders(); // Refresh tree
+      window.dispatchEvent(new CustomEvent('folder-stats-changed'));
       return newFolder;
     } catch (err) {
       throw err;
@@ -57,6 +58,7 @@ export function useFolders(adminMode = false, roleVersion = 0) {
     try {
       await apiClient.deleteFolder(id);
       await fetchFolders(); // Refresh tree
+      window.dispatchEvent(new CustomEvent('folder-stats-changed'));
     } catch (err) {
       throw err;
     }

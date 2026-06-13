@@ -7,12 +7,14 @@ import { useRoles } from '@/hooks/useRoles';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { User } from '@/types';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { AddUserModal } from './AddUserModal';
 import toast from 'react-hot-toast';
 
 export function UserManagement() {
-  const { users, loading, error, fetchUsers, updateUser, deleteUser } = useUsers();
+  const { users, loading, error, fetchUsers, createUser, updateUser, deleteUser } = useUsers();
   const { roles, loading: rolesLoading } = useRoles();
   const [page, setPage] = useState(1);
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -110,6 +112,13 @@ export function UserManagement() {
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-bold text-black">User Management</h2>
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Add User
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
@@ -307,6 +316,13 @@ export function UserManagement() {
           </div>
         </div>
       )}
+
+      <AddUserModal
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSuccess={() => fetchUsers(page, 10)}
+        onCreateUser={createUser}
+      />
 
       <ConfirmModal
         open={showConfirm}
