@@ -105,8 +105,8 @@ function FolderItem({
           </div>
         </button>
 
-        {/* Action buttons — only visible on hover */}
-        <div className="flex shrink-0 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        {/* Action buttons — slide in from right on hover */}
+        <div className="flex shrink-0 gap-0.5 translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-200">
           {canCreateSubfolder && (
             <button
               onClick={(e) => { e.stopPropagation(); onCreateSubfolder(folder.id); }}
