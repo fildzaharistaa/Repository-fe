@@ -976,6 +976,18 @@ class ApiClient {
   getShareDownloadUrl(token: string): string {
     return `${API_BASE_URL}/share/${token}/download`;
   }
+
+  async getShareFolderContents(token: string): Promise<import('@/types').ShareFolderContents> {
+    return this.request(`/share/${token}/contents`);
+  }
+
+  getShareFolderFileViewUrl(token: string, fileId: string): string {
+    return `${API_BASE_URL}/share/${token}/file/${fileId}/view`;
+  }
+
+  getShareFolderFileDownloadUrl(token: string, fileId: string): string {
+    return `${API_BASE_URL}/share/${token}/file/${fileId}/download`;
+  }
 }
 
 export const apiClient = new ApiClient();

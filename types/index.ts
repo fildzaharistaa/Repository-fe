@@ -232,6 +232,20 @@ export interface ShareLinkPublicInfo {
   created_at: string;
 }
 
+export interface ShareFolderFile {
+  id: string;
+  name: string;
+  size: number;
+  mime_type: string;
+  created_at: string;
+}
+
+export interface ShareFolderContents {
+  folderName: string;
+  permission: SharePermission;
+  files: ShareFolderFile[];
+}
+
 export interface GenerateShareLinkPayload {
   type: ShareItemType;
   id: string;
