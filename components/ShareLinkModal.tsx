@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  X, Link2, Copy, Check, RefreshCw, EyeOff, Globe, Building2,
+  X, Link2, Copy, Check, RefreshCw, EyeOff,
   Eye, Download, Clock, Loader2, AlertTriangle,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
-import type { ShareLink, ShareItemType, ShareAccessLevel, SharePermission } from '@/types';
+import type { ShareLink, ShareItemType, SharePermission } from '@/types';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -32,7 +32,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
   const [disabling, setDisabling] = useState(false);
 
   // Settings state
-  const [accessLevel, setAccessLevel] = useState<ShareAccessLevel>('anyone');
   const [permission, setPermission] = useState<SharePermission>('view');
   const [expiry, setExpiry] = useState<'never' | '1d' | '7d' | 'custom'>('never');
   const [customDate, setCustomDate] = useState('');
@@ -44,7 +43,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
       const existing = await apiClient.getExistingShareLink(itemType, itemId);
       if (existing && existing.token) {
         setLink(existing);
-        setAccessLevel(existing.access_level);
         setPermission(existing.permission);
         if (!existing.expires_at) {
           setExpiry('never');
@@ -60,7 +58,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
         }
       } else {
         setLink(null);
-        setAccessLevel('anyone');
         setPermission('view');
         setExpiry('never');
         setCustomDate('');
@@ -100,7 +97,7 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
       const newLink = await apiClient.generateShareLink({
         type: itemType,
         id: itemId,
-        access_level: accessLevel,
+        access_level: 'anyone',
         permission,
         expires_at: computeExpiresAt(),
       });
@@ -121,7 +118,7 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
     setSaving(true);
     try {
       const updated = await apiClient.updateShareLink(link.token, {
-        access_level: accessLevel,
+        access_level: 'anyone',
         permission,
         expires_at: computeExpiresAt(),
         is_active: true,
@@ -244,7 +241,7 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
                 </div>
               )}
 
-              {/* Expired / disabled warning */}
+              {/* Expired warning */}
               {link && isExpired && (
                 <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                   <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
@@ -254,35 +251,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
                   </div>
                 </div>
               )}
-
-              {/* Access Level */}
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Akses
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { value: 'anyone', label: 'Anyone with link', icon: Globe, desc: 'Siapa saja bisa akses' },
-                    { value: 'organization', label: 'Only within org', icon: Building2, desc: 'Hanya anggota organisasi' },
-                  ] as const).map(({ value, label, icon: Icon, desc }) => (
-                    <button
-                      key={value}
-                      onClick={() => setAccessLevel(value)}
-                      className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
-                        accessLevel === value
-                          ? 'border-orange-400 bg-orange-50'
-                          : 'border-gray-200 bg-white hover:border-orange-200'
-                      }`}
-                    >
-                      <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${accessLevel === value ? 'text-orange-600' : 'text-gray-400'}`} />
-                      <div>
-                        <p className={`text-xs font-semibold ${accessLevel === value ? 'text-orange-700' : 'text-gray-700'}`}>{label}</p>
-                        <p className="text-[10px] text-gray-400">{desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Permission */}
               <div>
@@ -352,7 +320,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
 
               {/* Action buttons */}
               <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
-                {/* Save / Generate */}
                 <button
                   onClick={handleSaveSettings}
                   disabled={saving}
@@ -364,7 +331,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
 
                 {link && (
                   <div className="flex gap-2">
-                    {/* Regenerate token */}
                     <button
                       onClick={handleRegenerate}
                       disabled={saving}
@@ -374,7 +340,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
                       Generate New Link
                     </button>
 
-                    {/* Disable link */}
                     <button
                       onClick={() => setShowDisableConfirm(true)}
                       disabled={saving}
