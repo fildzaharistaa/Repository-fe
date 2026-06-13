@@ -24,7 +24,7 @@ export function FilePreview({ file }: FilePreviewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<{
-    type: 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'docx' | 'xlsx' | 'unsupported';
+    type: 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'docx' | 'xlsx' | 'office' | 'unsupported';
     url?: string;
     text?: string;
     html?: string;
@@ -129,9 +129,11 @@ export function FilePreview({ file }: FilePreviewProps) {
           return;
         }
 
-        // 6. PPTX (PowerPoint)
+        // 6. PPTX (PowerPoint) — use MS Office Online Viewer
         if (mimeType.includes('presentationml') || mimeType.includes('powerpoint')) {
-          setPreviewContent({ type: 'unsupported' });
+          const previewUrl = apiClient.getPreviewUrl(file.id);
+          const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`;
+          setPreviewContent({ type: 'office', url: officeUrl });
           setLoading(false);
           return;
         }
@@ -307,6 +309,10 @@ export function FilePreview({ file }: FilePreviewProps) {
               .word-preview-content th { background-color: #f9fafb; }
             `}</style>
           </div>
+        )}
+
+        {previewContent.type === 'office' && (
+          <iframe src={previewContent.url} className="h-[70vh] w-full border-0" title={file.name} />
         )}
 
         {previewContent.type === 'xlsx' && (
