@@ -341,7 +341,7 @@ export function SharedFilesView() {
               </div>
             </div>
             <div className="max-h-[75vh] min-h-[50vh] overflow-y-auto bg-gray-50 p-6 rounded-b-xl flex justify-center">
-              <FilePreview file={selectedFile} />
+              <FilePreview file={selectedFile} canDownload={selectedFile.can_download ?? false} />
             </div>
           </div>
         </div>

@@ -17,14 +17,15 @@ import { File as FileEntity } from '@/types';
 
 interface FilePreviewProps {
   file: FileEntity;
+  canDownload?: boolean;
 }
 
-export function FilePreview({ file }: FilePreviewProps) {
+export function FilePreview({ file, canDownload }: FilePreviewProps) {
   const { hasPermission } = useAuthContext();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<{
-    type: 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'docx' | 'xlsx' | 'office' | 'unsupported';
+    type: 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'office' | 'unsupported';
     url?: string;
     text?: string;
     html?: string;
@@ -88,44 +89,21 @@ export function FilePreview({ file }: FilePreviewProps) {
           return;
         }
 
-        // 4. DOCX (Word)
+        // 4. DOCX (Word) — MS Office Online Viewer
         if (mimeType.includes('wordprocessingml') || mimeType.includes('msword')) {
-          try {
-            const blob = await apiClient.previewFile(file.id);
-            const arrayBuffer = await blob.arrayBuffer();
-            const mammoth = await import('mammoth');
-            const result = await mammoth.convertToHtml({ arrayBuffer });
-            if (isMounted) {
-              setPreviewContent({ type: 'docx', html: result.value });
-              setLoading(false);
-            }
-          } catch (err) {
-            console.error('DOCX conversion error:', err);
-            setPreviewContent({ type: 'unsupported' });
-            setLoading(false);
-          }
+          const previewUrl = apiClient.getPreviewUrl(file.id);
+          const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`;
+          setPreviewContent({ type: 'office', url: officeUrl });
+          setLoading(false);
           return;
         }
 
-        // 5. XLSX (Excel)
+        // 5. XLSX (Excel) — MS Office Online Viewer
         if (mimeType.includes('spreadsheetml') || mimeType.includes('excel')) {
-          try {
-            const blob = await apiClient.previewFile(file.id);
-            const arrayBuffer = await blob.arrayBuffer();
-            const XLSX = await import('xlsx');
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const html = XLSX.utils.sheet_to_html(worksheet);
-            if (isMounted) {
-              setPreviewContent({ type: 'xlsx', html });
-              setLoading(false);
-            }
-          } catch (err) {
-            console.error('XLSX conversion error:', err);
-            setPreviewContent({ type: 'unsupported' });
-            setLoading(false);
-          }
+          const previewUrl = apiClient.getPreviewUrl(file.id);
+          const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`;
+          setPreviewContent({ type: 'office', url: officeUrl });
+          setLoading(false);
           return;
         }
 
@@ -223,7 +201,7 @@ export function FilePreview({ file }: FilePreviewProps) {
           Maaf, format file <strong>{file.mime_type}</strong> belum didukung untuk preview langsung di browser.
         </p>
         <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
-          {hasPermission('file.download') && (
+          {(canDownload ?? hasPermission('file.download')) && (
             <button
               onClick={handleDownload}
               className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all"
@@ -297,20 +275,6 @@ export function FilePreview({ file }: FilePreviewProps) {
           </div>
         )}
 
-        {previewContent.type === 'docx' && (
-          <div className="bg-white p-8 md:p-12">
-            <div 
-              className="prose prose-sm md:prose-base max-w-none text-gray-800 word-preview-content"
-              dangerouslySetInnerHTML={{ __html: previewContent.html || '' }} 
-            />
-            <style jsx global>{`
-              .word-preview-content table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-              .word-preview-content th, .word-preview-content td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
-              .word-preview-content th { background-color: #f9fafb; }
-            `}</style>
-          </div>
-        )}
-
         {previewContent.type === 'office' && (
           <div className="relative h-[70vh] w-full">
             <iframe src={previewContent.url} className="h-full w-full border-0" title={file.name} />
@@ -318,20 +282,6 @@ export function FilePreview({ file }: FilePreviewProps) {
           </div>
         )}
 
-        {previewContent.type === 'xlsx' && (
-          <div className="bg-white p-4 overflow-auto">
-            <div 
-              className="excel-preview-content"
-              dangerouslySetInnerHTML={{ __html: previewContent.html || '' }} 
-            />
-            <style jsx global>{`
-              .excel-preview-content table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
-              .excel-preview-content th, .excel-preview-content td { border: 1px solid #e5e7eb; padding: 0.4rem 0.6rem; min-width: 80px; }
-              .excel-preview-content tr:nth-child(even) { background-color: #f9fafb; }
-              .excel-preview-content th { background-color: #f3f4f6; font-weight: 600; text-align: center; }
-            `}</style>
-          </div>
-        )}
       </div>
     </div>
   );
