@@ -43,8 +43,7 @@ export function FilePreview({ file, canDownload }: FilePreviewProps) {
         // 1. PDF - use iframe with preview URL
         if (mimeType.includes('pdf')) {
           let url = apiClient.getPreviewUrl(file.id);
-          // Hide toolbar (download/print) if user doesn't have download permission
-          if (!hasPermission('file.download')) {
+          if (!(canDownload ?? hasPermission('file.download'))) {
             url += '#toolbar=0&navpanes=0';
           }
           setPreviewContent({ type: 'pdf', url });
@@ -233,11 +232,16 @@ export function FilePreview({ file, canDownload }: FilePreviewProps) {
         )}
 
         {previewContent.type === 'pdf' && (
-          <iframe
-            src={previewContent.url}
-            className="h-[70vh] w-full rounded-lg border-0"
-            title={file.name}
-          />
+          <div className="relative h-[70vh] w-full">
+            <iframe
+              src={previewContent.url}
+              className="h-full w-full rounded-lg border-0"
+              title={file.name}
+            />
+            {!(canDownload ?? hasPermission('file.download')) && (
+              <div className="absolute inset-x-0 top-0 h-10 z-10" />
+            )}
+          </div>
         )}
 
         {previewContent.type === 'video' && (
