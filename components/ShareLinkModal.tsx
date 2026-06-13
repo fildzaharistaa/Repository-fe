@@ -42,7 +42,7 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
     setLoading(true);
     try {
       const existing = await apiClient.getExistingShareLink(itemType, itemId);
-      if (existing) {
+      if (existing && existing.token) {
         setLink(existing);
         setAccessLevel(existing.access_level);
         setPermission(existing.permission);
@@ -104,6 +104,9 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
         permission,
         expires_at: computeExpiresAt(),
       });
+      if (!newLink?.token) {
+        throw new Error('Server tidak mengembalikan token yang valid');
+      }
       setLink(newLink);
       toast.success('Share link berhasil dibuat');
     } catch (err) {
