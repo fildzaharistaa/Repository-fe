@@ -21,12 +21,40 @@ function formatDate(iso: string): string {
   });
 }
 
+function detectMime(mimeFromServer?: string, fileName?: string): string | undefined {
+  if (mimeFromServer) return mimeFromServer;
+  const ext = fileName?.split('.').pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    pdf: 'application/pdf',
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+  return ext ? map[ext] : undefined;
+}
+
 function isImage(mime?: string) {
   return mime?.startsWith('image/') ?? false;
 }
 
 function isPdf(mime?: string) {
   return mime === 'application/pdf';
+}
+
+function isOfficeDoc(mime?: string) {
+  return !!(mime && [
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  ].includes(mime));
 }
 
 export default function SharePage() {
@@ -137,7 +165,10 @@ export default function SharePage() {
   }
 
   const isFile = info.item_type === 'file';
-  const canPreviewInline = isImage(info.mime_type) || isPdf(info.mime_type);
+  const effectiveMime = detectMime(info.mime_type, info.item_name);
+  const canPreviewInline = isImage(effectiveMime) || isPdf(effectiveMime) || isOfficeDoc(effectiveMime);
+  // Office docs use Microsoft Online Viewer; PDF/image use direct viewUrl
+  const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(viewUrl)}`;
 
   return (
     <>
@@ -246,22 +277,21 @@ export default function SharePage() {
               </button>
             </div>
             <div className="flex-1 overflow-hidden">
-              {isPdf(info.mime_type) && (
-                <embed
-                  src={viewUrl}
-                  type="application/pdf"
-                  className="h-full w-full"
-                />
+              {isPdf(effectiveMime) && (
+                <embed src={viewUrl} type="application/pdf" className="h-full w-full" />
               )}
-              {isImage(info.mime_type) && (
+              {isImage(effectiveMime) && (
                 <div className="flex h-full items-center justify-center bg-gray-50 p-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={viewUrl}
-                    alt={info.item_name}
-                    className="max-h-full max-w-full object-contain rounded-lg"
-                  />
+                  <img src={viewUrl} alt={info.item_name} className="max-h-full max-w-full object-contain rounded-lg" />
                 </div>
+              )}
+              {isOfficeDoc(effectiveMime) && (
+                <iframe
+                  src={officeViewerUrl}
+                  className="h-full w-full border-0"
+                  title={info.item_name}
+                />
               )}
             </div>
           </div>
