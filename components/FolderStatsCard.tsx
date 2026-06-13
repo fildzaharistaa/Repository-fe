@@ -12,11 +12,13 @@ import {
   ChevronDown,
   Share2,
   User,
+  Link2,
 } from 'lucide-react';
 import { formatFileSize } from '@/lib/utils/formatters';
 import { useFolderChildren } from '@/hooks/useFolderChildren';
 import { FolderChildNode } from '@/components/FolderChildNode';
 import type { FolderOverviewItem } from '@/types';
+import { ShareLinkModal } from '@/components/ShareLinkModal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -166,6 +168,7 @@ type Props = FolderStatsCardProps | FolderStatsCardLoadingProps;
 
 export function FolderStatsCard(props: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
 
   if (props.loading) return <FolderStatsCardSkeleton />;
 
@@ -313,11 +316,28 @@ export function FolderStatsCard(props: Props) {
             <FolderOpen className="h-3.5 w-3.5" />
             Buka Folder
           </button>
+          <button
+            onClick={() => setShowShareLinkModal(true)}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-orange-200 bg-white
+                       hover:bg-orange-50 text-orange-600 text-xs font-semibold px-3 py-2 transition-colors"
+            title="Share Link"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Link
+          </button>
         </div>
       </div>
 
       {/* ── Expansion panel (lazy-rendered) ── */}
       {isExpanded && <ExpansionPanel item={item} />}
+
+      <ShareLinkModal
+        open={showShareLinkModal}
+        onClose={() => setShowShareLinkModal(false)}
+        itemType="folder"
+        itemId={item.id}
+        itemName={item.name}
+      />
     </div>
   );
 }

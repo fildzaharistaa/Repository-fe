@@ -193,6 +193,59 @@ export interface FolderOverviewItem {
   is_shared?: boolean;
 }
 
+// Share Link Types
+export type ShareItemType = 'file' | 'folder';
+export type ShareAccessLevel = 'anyone' | 'organization';
+export type SharePermission = 'view' | 'download';
+
+export interface ShareLink {
+  id: string;
+  token: string;
+  item_type: ShareItemType;
+  item_id: string;
+  created_by: string;
+  access_level: ShareAccessLevel;
+  permission: SharePermission;
+  expires_at: string | null;
+  is_active: boolean;
+  view_count: number;
+  download_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShareLinkPublicInfo {
+  token: string;
+  item_type: ShareItemType;
+  item_id: string;
+  item_name: string;
+  item_size?: number;
+  shared_by: string;
+  shared_by_email: string;
+  access_level: ShareAccessLevel;
+  permission: SharePermission;
+  expires_at: string | null;
+  is_active: boolean;
+  view_count: number;
+  download_count: number;
+  created_at: string;
+}
+
+export interface GenerateShareLinkPayload {
+  type: ShareItemType;
+  id: string;
+  access_level?: ShareAccessLevel;
+  permission?: SharePermission;
+  expires_at?: string | null;
+}
+
+export interface UpdateShareLinkPayload {
+  access_level?: ShareAccessLevel;
+  permission?: SharePermission;
+  expires_at?: string | null;
+  is_active?: boolean;
+}
+
 // Error Response
 export interface ErrorResponse {
   statusCode: number;

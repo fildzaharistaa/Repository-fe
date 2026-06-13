@@ -21,6 +21,7 @@ import {
   Trash2,
   Edit2,
   Search,
+  Link2,
 } from 'lucide-react';
 import Image from 'next/image';
 import logoImage from '@/app/icon.png';
@@ -30,6 +31,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
+import { ShareLinkModal } from './ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import toast from 'react-hot-toast';
 import { FolderModal } from '@/components/FolderModal';
@@ -42,6 +44,7 @@ interface FolderItemProps {
   onCreateSubfolder: (parentId: string) => void;
   onEdit: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onShareLink: (id: string, name: string) => void;
   depth: number;
   maxDepth: number;
   canCreateSubfolder: boolean;
@@ -54,6 +57,7 @@ function FolderItem({
   onCreateSubfolder,
   onEdit,
   onDelete,
+  onShareLink,
   depth,
   canCreateSubfolder,
   maxDepth
@@ -141,6 +145,16 @@ function FolderItem({
           >
             <X className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShareLink(folder.id, folder.name);
+            }}
+            className="rounded px-2 py-1 text-xs text-orange-600 hover:bg-orange-50"
+            title="Share Link"
+          >
+            <Link2 className="h-3 w-3" />
+          </button>
         </div>
       </div>
       {expanded && hasChildren && (
@@ -154,6 +168,7 @@ function FolderItem({
               onCreateSubfolder={onCreateSubfolder}
               onEdit={onEdit}
               onDelete={onDelete}
+              onShareLink={onShareLink}
               depth={depth + 1}
               maxDepth={maxDepth}
               canCreateSubfolder={canCreateSubfolder}
@@ -223,6 +238,15 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showHierarchyModal, setShowHierarchyModal] = useState(false);
   const [requestedDepth, setRequestedDepth] = useState(6);
   const [hierarchyMessage, setHierarchyMessage] = useState('');
+
+  // Share Link modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkTarget, setShareLinkTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const handleShareLinkFolder = (id: string, name: string) => {
+    setShareLinkTarget({ id, name });
+    setShowShareLinkModal(true);
+  };
 
   // Fetch user stats on mount to get correct maxFolderDepth
   useEffect(() => {
@@ -522,6 +546,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onCreateSubfolder={handleCreateSubfolder}
                   onEdit={handleEditFolder}
                   onDelete={handleDeleteFolder}
+                  onShareLink={handleShareLinkFolder}
                   depth={1}
                   maxDepth={maxFolderDepth}
                   canCreateSubfolder={canCreateSubfolder}
@@ -654,6 +679,16 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             </div>
           </div>
         </div>
+      )}
+
+      {shareLinkTarget && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkTarget(null); }}
+          itemType="folder"
+          itemId={shareLinkTarget.id}
+          itemName={shareLinkTarget.name}
+        />
       )}
     </div>
   );

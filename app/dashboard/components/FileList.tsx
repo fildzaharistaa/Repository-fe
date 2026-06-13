@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, DragEvent, useMemo, Fragment } from 'react';
 import { useFolderContext } from '@/context/FolderContext';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft, Link2 } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/context/AuthContext';
@@ -11,6 +11,7 @@ import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
 import { ConfirmModal } from '../../../components/ConfirmModal';
+import { ShareLinkModal } from '../../../components/ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 import toast from 'react-hot-toast';
@@ -110,6 +111,10 @@ export function FileList({ folderId }: FileListProps) {
   const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+
+  // Share Link modal state
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkFile, setShareLinkFile] = useState<FileEntity | null>(null);
 
   // States for Request Access Modal
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -572,6 +577,16 @@ export function FileList({ folderId }: FileListProps) {
               >
                 <Share2 className="h-3.5 w-3.5" />
                 Share
+              </button>
+            )}
+            {isOwnerOrAdmin && (
+              <button
+                onClick={() => { setShareLinkFile(file); setShowShareLinkModal(true); }}
+                className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"
+                title="Share Link"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                Link
               </button>
             )}
             {hasEditRights && (
@@ -1252,6 +1267,16 @@ export function FileList({ folderId }: FileListProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {shareLinkFile && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkFile(null); }}
+          itemType="file"
+          itemId={shareLinkFile.id}
+          itemName={shareLinkFile.name}
+        />
       )}
     </>
   );

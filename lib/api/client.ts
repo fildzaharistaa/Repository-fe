@@ -16,6 +16,10 @@ import type {
   MyRolesResponse,
   SwitchRoleResponse,
   PermissionVisibility,
+  ShareLink,
+  ShareLinkPublicInfo,
+  GenerateShareLinkPayload,
+  UpdateShareLinkPayload,
 } from '@/types';
 import { apiLogger } from './logger';
 
@@ -916,6 +920,61 @@ class ApiClient {
 
   async saGetAllActiveUserRoles(): Promise<UserRole[]> {
     return this.request<UserRole[]>('/super-admin/user-roles/active-summary');
+  }
+
+  // ========== Share Links ==========
+  async generateShareLink(payload: GenerateShareLinkPayload): Promise<ShareLink> {
+    return this.request<ShareLink>('/share/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getExistingShareLink(type: 'file' | 'folder', itemId: string): Promise<ShareLink | null> {
+    try {
+      return await this.request<ShareLink>(`/share/item/${type}/${itemId}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async getShareLinkByToken(token: string): Promise<ShareLinkPublicInfo> {
+    return this.request<ShareLinkPublicInfo>(`/share/${token}`);
+  }
+
+  async updateShareLink(token: string, payload: UpdateShareLinkPayload): Promise<ShareLink> {
+    return this.request<ShareLink>(`/share/${token}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async regenerateShareLink(token: string): Promise<ShareLink> {
+    return this.request<ShareLink>(`/share/${token}/regenerate`, {
+      method: 'POST',
+    });
+  }
+
+  async disableShareLink(token: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/share/${token}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getShareLinkStats(token: string): Promise<{ view_count: number; download_count: number }> {
+    return this.request(`/share/${token}/stats`);
+  }
+
+  async getMySharedLinks(): Promise<ShareLink[]> {
+    return this.request<ShareLink[]>('/share/my/links');
+  }
+
+  getShareViewUrl(token: string): string {
+    return `${API_BASE_URL}/share/${token}/view`;
+  }
+
+  getShareDownloadUrl(token: string): string {
+    return `${API_BASE_URL}/share/${token}/download`;
   }
 }
 
