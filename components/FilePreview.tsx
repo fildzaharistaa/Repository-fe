@@ -312,7 +312,10 @@ export function FilePreview({ file }: FilePreviewProps) {
         )}
 
         {previewContent.type === 'office' && (
-          <iframe src={previewContent.url} className="h-[70vh] w-full border-0" title={file.name} />
+          <div className="relative h-[70vh] w-full">
+            <iframe src={previewContent.url} className="h-full w-full border-0" title={file.name} />
+            <div className="absolute inset-x-0 bottom-0 h-10 z-10" />
+          </div>
         )}
 
         {previewContent.type === 'xlsx' && (

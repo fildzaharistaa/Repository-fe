@@ -866,7 +866,7 @@ export function FileList({ folderId }: FileListProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {canDownload && (
+                {(selectedFile.can_download !== undefined ? (selectedFile.can_download && canDownload) : canDownload) && (
                   <button
                     onClick={() => handleDownload(selectedFile)}
                     className="flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
