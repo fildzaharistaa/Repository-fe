@@ -357,7 +357,7 @@ export function AllFilesView() {
                             <Download className="h-3.5 w-3.5" /> Download
                           </button>
                         )}
-                        {!isShared && (
+                        {!isShared && hasPermission('file.delete') && (
                           <button
                             onClick={() => { setShareLinkTarget({ id: file.id, name: file.name, type: 'file' }); setShowShareLinkModal(true); }}
                             className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"

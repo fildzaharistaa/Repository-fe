@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import { Search, RefreshCw, FolderOpen, ChevronDown } from 'lucide-react';
 import { useFolderOverview, FolderSortOption } from '@/hooks/useFolderOverview';
 import { FolderStatsCard } from '@/components/FolderStatsCard';
+import { invalidateFolderChildrenCache } from '@/hooks/useFolderChildren';
 import { useFolderContext } from '@/context/FolderContext';
 
 const SORT_LABELS: Record<FolderSortOption, string> = {
@@ -22,6 +23,13 @@ export function FolderOverviewSection({ roleVersion }: Props) {
     useFolderOverview(roleVersion);
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
+
+  // Clear the module-level folder-children cache whenever the active role changes.
+  // Without this, expanding a folder card after a role switch could show stale
+  // children data fetched under the previous role.
+  useEffect(() => {
+    invalidateFolderChildrenCache();
+  }, [roleVersion]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
