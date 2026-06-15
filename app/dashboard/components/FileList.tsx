@@ -15,6 +15,7 @@ import { ConfirmModal } from '../../../components/ConfirmModal';
 import { ShareLinkModal } from '../../../components/ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
+import { canModifyFile } from '@/lib/utils/filePermissions';
 import toast from 'react-hot-toast';
 
 interface FileListProps {
@@ -41,8 +42,9 @@ export function FileList({ folderId }: FileListProps) {
   const [subfolders, setSubfolders] = useState<any[]>([]);
   const [uploaderSearch, setUploaderSearch] = useState('');
   const { user } = useAuth();
-  const { isAdmin, hasPermission } = useAuthContext();
+  const { isAdmin, hasPermission, activeRoleId } = useAuthContext();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
+  const [folderOwnerId, setFolderOwnerId] = useState<string | null>(null);
   const [folderPermissions, setFolderPermissions] = useState<any[]>([]);
 
   const canUpload = hasPermission('file.upload');
@@ -57,6 +59,7 @@ export function FileList({ folderId }: FileListProps) {
           setFolderName(folder.name);
           setParentFolderId(folder.parent_id);
           const ownerId = folder.owner?.id || (folder as any).owner_id;
+          setFolderOwnerId(ownerId ?? null);
           const ownerOrAdmin = user?.id === ownerId || isAdmin;
           setIsOwnerOrAdmin(ownerOrAdmin);
 
@@ -71,12 +74,14 @@ export function FileList({ folderId }: FileListProps) {
           console.error('Failed to fetch folder info', err);
           setSubfolders([]);
           setIsOwnerOrAdmin(false);
+          setFolderOwnerId(null);
           setFolderPermissions([]);
         });
     } else {
       setFolderName(null);
       setSubfolders([]);
       setIsOwnerOrAdmin(true);
+      setFolderOwnerId(null);
     }
   };
 
@@ -574,35 +579,39 @@ export function FileList({ folderId }: FileListProps) {
               <Eye className="h-3.5 w-3.5" />
               View
             </button>
-            {isOwnerOrAdmin && (
-              <button
-                onClick={() => handleShareClick(file)}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
-                title="Share File"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-                Share
-              </button>
-            )}
-            {isOwnerOrAdmin && (
-              <button
-                onClick={() => { setShareLinkFile(file); setShowShareLinkModal(true); }}
-                className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"
-                title="Share Link"
-              >
-                <Link2 className="h-3.5 w-3.5" />
-                Link
-              </button>
-            )}
-            {isOwnerOrAdmin && (
-              <button
-                onClick={() => handleRenameClick(file)}
-                className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
-                title="Rename File"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-                Rename
-              </button>
+            {canModifyFile({
+              file,
+              folder: { owner_id: folderOwnerId ?? undefined },
+              user,
+              activeRoleId,
+              isAdmin,
+            }) && (
+              <>
+                <button
+                  onClick={() => handleShareClick(file)}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-all hover:shadow-sm"
+                  title="Share File"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Share
+                </button>
+                <button
+                  onClick={() => { setShareLinkFile(file); setShowShareLinkModal(true); }}
+                  className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"
+                  title="Share Link"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Link
+                </button>
+                <button
+                  onClick={() => handleRenameClick(file)}
+                  className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
+                  title="Rename File"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                  Rename
+                </button>
+              </>
             )}
             {canDownload && (
               <button

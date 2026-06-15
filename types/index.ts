@@ -138,6 +138,8 @@ export interface File {
   owner_role?: string;
   uploaded_by?: string;
   uploaded_by_role?: string;
+  uploaded_by_role_id?: string | null;
+  folder_owner_id?: string | null;
   can_read?: boolean;
   can_download?: boolean;
   can_create?: boolean;
