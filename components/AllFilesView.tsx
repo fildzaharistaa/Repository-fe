@@ -7,7 +7,9 @@ import { useAllFiles } from '@/hooks/useAllFiles';
 import { useSharedFiles } from '@/hooks/useSharedFiles';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuthContext } from '@/context/AuthContext';
-import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo, isFileInactive } from '@/lib/utils/formatters';
+import { apiClient } from '@/lib/api/client';
+import { InactiveBadge } from './InactiveBadge';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
 import { handleApiError } from '@/lib/utils/errorHandler';
@@ -114,6 +116,7 @@ export function AllFilesView() {
   const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
     setShowQuickView(true);
+    apiClient.recordFileAccess(file.id).catch(() => {});
   };
 
   if (isLoading) {
@@ -297,6 +300,11 @@ export function AllFilesView() {
                             <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
                           </button>
                           <p className="text-xs text-gray-500">{fileInfo.label}</p>
+                          {isFileInactive(file) && (
+                            <div className="mt-0.5">
+                              <InactiveBadge />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>

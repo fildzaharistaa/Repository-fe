@@ -6,7 +6,8 @@ import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/context/AuthContext';
-import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo, isFileInactive } from '@/lib/utils/formatters';
+import { InactiveBadge } from '../../../components/InactiveBadge';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
@@ -383,6 +384,7 @@ export function FileList({ folderId }: FileListProps) {
   const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
     setShowQuickView(true);
+    apiClient.recordFileAccess(file.id).catch(() => {});
   };
 
   const handleFileSelect = async (files: FileList | null) => {
@@ -530,6 +532,11 @@ export function FileList({ folderId }: FileListProps) {
                 <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
               </button>
               <p className="text-xs text-gray-500">{fileInfo.label}</p>
+              {isFileInactive(file) && (
+                <div className="mt-0.5">
+                  <InactiveBadge />
+                </div>
+              )}
               {(!isOwnerOrAdmin || legacyDosenTendik) && (file.uploaded_by || file.owner_name) && (
                 <div className="mt-1 flex items-center gap-1.5">
                   <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-100 text-[9px] font-bold text-orange-600">

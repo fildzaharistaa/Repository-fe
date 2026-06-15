@@ -327,6 +327,12 @@ class ApiClient {
     return this.request<FileEntity[]>(`/files/folder/${folderId}`);
   }
 
+  async recordFileAccess(id: string): Promise<{ last_accessed_at: string }> {
+    return this.request<{ last_accessed_at: string }>(`/files/${id}/access`, {
+      method: 'POST',
+    });
+  }
+
   async getFile(id: string): Promise<FileEntity> {
     return this.request<FileEntity>(`/files/${id}`);
   }

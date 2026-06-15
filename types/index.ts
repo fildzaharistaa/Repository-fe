@@ -143,6 +143,7 @@ export interface File {
   can_create?: boolean;
   can_update?: boolean;
   can_delete?: boolean;
+  last_accessed_at?: string | null;
 }
 
 // Permission Types
