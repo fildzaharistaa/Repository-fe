@@ -21,6 +21,7 @@ import {
   Trash2,
   Edit2,
   Search,
+  Link2,
 } from 'lucide-react';
 import Image from 'next/image';
 import logoImage from '@/app/icon.png';
@@ -30,6 +31,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
+import { ShareLinkModal } from './ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import toast from 'react-hot-toast';
 import { FolderModal } from '@/components/FolderModal';
@@ -42,6 +44,7 @@ interface FolderItemProps {
   onCreateSubfolder: (parentId: string) => void;
   onEdit: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onShareLink: (id: string, name: string) => void;
   depth: number;
   maxDepth: number;
   canCreateSubfolder: boolean;
@@ -54,6 +57,7 @@ function FolderItem({
   onCreateSubfolder,
   onEdit,
   onDelete,
+  onShareLink,
   depth,
   canCreateSubfolder,
   maxDepth
@@ -64,29 +68,30 @@ function FolderItem({
   return (
     <div>
       <div
-        className={`flex items-center gap-2 rounded px-2 py-1 hover:bg-gray-100 ${selectedId === folder.id ? 'bg-blue-100' : ''
-          }`}
+        className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-gray-100 ${
+          selectedId === folder.id ? 'bg-orange-50' : ''
+        }`}
       >
         <button
           onClick={() => {
             if (hasChildren) setExpanded(!expanded);
             onSelect(folder.id);
           }}
-          className="flex flex-1 items-center gap-2 text-left"
+          className="flex flex-1 items-center gap-2 text-left min-w-0"
         >
           {hasChildren ? (
             expanded ? (
-              <ChevronDown className="h-3 w-3 text-gray-500" />
+              <ChevronDown className="h-3 w-3 shrink-0 text-gray-400" />
             ) : (
-              <ChevronRight className="h-3 w-3 text-gray-500" />
+              <ChevronRight className="h-3 w-3 shrink-0 text-gray-400" />
             )
           ) : (
-            <span className="w-3" />
+            <span className="w-3 shrink-0" />
           )}
           {expanded ? (
-            <FolderOpen className="h-4 w-4 text-orange-600" />
+            <FolderOpen className="h-4 w-4 shrink-0 text-orange-500" />
           ) : (
-            <Folder className="h-4 w-4 text-gray-600" />
+            <Folder className={`h-4 w-4 shrink-0 ${selectedId === folder.id ? 'text-orange-500' : 'text-gray-400'}`} />
           )}
           <div className="flex flex-col min-w-0">
             {(folder as any).shared_parent_name && (
@@ -94,52 +99,54 @@ function FolderItem({
                 📂 {(folder as any).shared_parent_name}
               </span>
             )}
-            <span className="text-black text-sm font-medium truncate">{folder.name}</span>
+            <span className={`text-sm font-medium truncate ${selectedId === folder.id ? 'text-orange-700' : 'text-gray-700'}`}>
+              {folder.name}
+            </span>
           </div>
         </button>
-        <div className="flex gap-1">
+
+        {/* Action buttons — slide in from right on hover */}
+        <div className="flex shrink-0 gap-0.5 translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-200">
           {canCreateSubfolder && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCreateSubfolder(folder.id); }}
+              disabled={depth >= maxDepth || (folder.children?.length ?? 0) >= maxDepth}
+              className={`rounded p-1 ${
+                depth >= maxDepth || (folder.children?.length ?? 0) >= maxDepth
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-blue-500 hover:bg-blue-50'
+              }`}
+              title={
+                (folder.children?.length ?? 0) >= maxDepth
+                  ? `Batas subfolder sudah tercapai (maks ${maxDepth})`
+                  : depth >= maxDepth
+                  ? `Max ${maxDepth} levels reached`
+                  : 'Buat subfolder'
+              }
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateSubfolder(folder.id);
-            }}
-            disabled={depth >= maxDepth || (folder.children?.length ?? 0) >= maxDepth}
-            className={`rounded px-2 py-1 text-xs ${
-              depth >= maxDepth || (folder.children?.length ?? 0) >= maxDepth
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-blue-600 hover:bg-blue-50'
-            }`}
-            title={
-              (folder.children?.length ?? 0) >= maxDepth
-                ? `Batas subfolder sudah tercapai (maks ${maxDepth})`
-                : depth >= maxDepth
-                ? `Max ${maxDepth} levels reached`
-                : 'Buat subfolder'
-            }
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(folder.id, folder.name);
-            }}
-            className="rounded px-2 py-1 text-xs text-amber-600 hover:bg-amber-50"
+            onClick={(e) => { e.stopPropagation(); onEdit(folder.id, folder.name); }}
+            className="rounded p-1 text-amber-500 hover:bg-amber-50"
             title="Edit folder"
           >
             <Edit2 className="h-3 w-3" />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(folder.id);
-            }}
-            className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-            title="Delete folder"
+            onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
+            className="rounded p-1 text-red-500 hover:bg-red-50"
+            title="Hapus folder"
           >
             <X className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onShareLink(folder.id, folder.name); }}
+            className="rounded p-1 text-orange-500 hover:bg-orange-50"
+            title="Share Link"
+          >
+            <Link2 className="h-3 w-3" />
           </button>
         </div>
       </div>
@@ -154,6 +161,7 @@ function FolderItem({
               onCreateSubfolder={onCreateSubfolder}
               onEdit={onEdit}
               onDelete={onDelete}
+              onShareLink={onShareLink}
               depth={depth + 1}
               maxDepth={maxDepth}
               canCreateSubfolder={canCreateSubfolder}
@@ -223,6 +231,15 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [showHierarchyModal, setShowHierarchyModal] = useState(false);
   const [requestedDepth, setRequestedDepth] = useState(6);
   const [hierarchyMessage, setHierarchyMessage] = useState('');
+
+  // Share Link modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkTarget, setShareLinkTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const handleShareLinkFolder = (id: string, name: string) => {
+    setShareLinkTarget({ id, name });
+    setShowShareLinkModal(true);
+  };
 
   // Fetch user stats on mount to get correct maxFolderDepth
   useEffect(() => {
@@ -522,6 +539,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
                   onCreateSubfolder={handleCreateSubfolder}
                   onEdit={handleEditFolder}
                   onDelete={handleDeleteFolder}
+                  onShareLink={handleShareLinkFolder}
                   depth={1}
                   maxDepth={maxFolderDepth}
                   canCreateSubfolder={canCreateSubfolder}
@@ -654,6 +672,16 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
             </div>
           </div>
         </div>
+      )}
+
+      {shareLinkTarget && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkTarget(null); }}
+          itemType="folder"
+          itemId={shareLinkTarget.id}
+          itemName={shareLinkTarget.name}
+        />
       )}
     </div>
   );

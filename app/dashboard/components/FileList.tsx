@@ -2,15 +2,17 @@
 
 import { useState, useEffect, useRef, DragEvent, useMemo, Fragment } from 'react';
 import { useFolderContext } from '@/context/FolderContext';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft, Link2 } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/context/AuthContext';
-import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo, isFileInactive } from '@/lib/utils/formatters';
+import { InactiveBadge } from '../../../components/InactiveBadge';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
 import { ConfirmModal } from '../../../components/ConfirmModal';
+import { ShareLinkModal } from '../../../components/ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 import toast from 'react-hot-toast';
@@ -108,6 +110,10 @@ export function FileList({ folderId }: FileListProps) {
   const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+
+  // Share Link modal state
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkFile, setShareLinkFile] = useState<FileEntity | null>(null);
 
   // States for Request Access Modal
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -376,6 +382,7 @@ export function FileList({ folderId }: FileListProps) {
   const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
     setShowQuickView(true);
+    apiClient.recordFileAccess(file.id).catch(() => {});
   };
 
   const handleFileSelect = async (files: FileList | null) => {
@@ -523,6 +530,11 @@ export function FileList({ folderId }: FileListProps) {
                 <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
               </button>
               <p className="text-xs text-gray-500">{fileInfo.label}</p>
+              {isFileInactive(file) && (
+                <div className="mt-0.5">
+                  <InactiveBadge />
+                </div>
+              )}
               {(!isOwnerOrAdmin || legacyDosenTendik) && (file.uploaded_by || file.owner_name) && (
                 <div className="mt-1 flex items-center gap-1.5">
                   <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-100 text-[9px] font-bold text-orange-600">
@@ -570,6 +582,16 @@ export function FileList({ folderId }: FileListProps) {
               >
                 <Share2 className="h-3.5 w-3.5" />
                 Share
+              </button>
+            )}
+            {isOwnerOrAdmin && (
+              <button
+                onClick={() => { setShareLinkFile(file); setShowShareLinkModal(true); }}
+                className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"
+                title="Share Link"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                Link
               </button>
             )}
             {isOwnerOrAdmin && (
@@ -849,7 +871,7 @@ export function FileList({ folderId }: FileListProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {canDownload && (
+                {(selectedFile.can_download !== undefined ? (selectedFile.can_download && canDownload) : canDownload) && (
                   <button
                     onClick={() => handleDownload(selectedFile)}
                     className="flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all"
@@ -1250,6 +1272,16 @@ export function FileList({ folderId }: FileListProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {shareLinkFile && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkFile(null); }}
+          itemType="file"
+          itemId={shareLinkFile.id}
+          itemName={shareLinkFile.name}
+        />
       )}
     </>
   );

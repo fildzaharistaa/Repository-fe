@@ -1,18 +1,22 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FileText, Download, Eye, Trash2, X, Folder, Share2, Mail, User, Clock, Loader2, ChevronDown } from 'lucide-react';
+import { FileText, Download, Eye, Trash2, X, Folder, Share2, Mail, User, Clock, Loader2, ChevronDown, Link2 } from 'lucide-react';
 import { useFolders } from '@/hooks/useFolders';
 import { useAllFiles } from '@/hooks/useAllFiles';
 import { useSharedFiles } from '@/hooks/useSharedFiles';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuthContext } from '@/context/AuthContext';
-import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
+import { formatFileSize, formatDate, getFileTypeInfo, isFileInactive } from '@/lib/utils/formatters';
+import { apiClient } from '@/lib/api/client';
+import { InactiveBadge } from './InactiveBadge';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
 import { handleApiError } from '@/lib/utils/errorHandler';
 import type { File as FileEntity } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
+import { ShareLinkModal } from './ShareLinkModal';
+import type { ShareItemType } from '@/types';
 import toast from 'react-hot-toast';
 
 type FilterTab = 'my-files' | 'shared-files';
@@ -34,6 +38,10 @@ export function AllFilesView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  // Share Link modal
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
+  const [shareLinkTarget, setShareLinkTarget] = useState<{ id: string; name: string; type: ShareItemType } | null>(null);
   const { deleteFile: deleteMyFile } = useFiles(selectedFolderId);
 
   // Filter state for shared files
@@ -108,6 +116,7 @@ export function AllFilesView() {
   const handleQuickView = (file: FileEntity) => {
     setSelectedFile(file);
     setShowQuickView(true);
+    apiClient.recordFileAccess(file.id).catch(() => {});
   };
 
   if (isLoading) {
@@ -291,6 +300,11 @@ export function AllFilesView() {
                             <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
                           </button>
                           <p className="text-xs text-gray-500">{fileInfo.label}</p>
+                          {isFileInactive(file) && (
+                            <div className="mt-0.5">
+                              <InactiveBadge />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -344,6 +358,14 @@ export function AllFilesView() {
                           </button>
                         )}
                         {!isShared && hasPermission('file.delete') && (
+                          <button
+                            onClick={() => { setShareLinkTarget({ id: file.id, name: file.name, type: 'file' }); setShowShareLinkModal(true); }}
+                            className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"
+                          >
+                            <Link2 className="h-3.5 w-3.5" /> Link
+                          </button>
+                        )}
+                        {!isShared && (
                           <button
                             onClick={() => handleDelete(file)}
                             className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
@@ -417,6 +439,16 @@ export function AllFilesView() {
         }}
         onConfirm={confirmDelete}
       />
+
+      {shareLinkTarget && (
+        <ShareLinkModal
+          open={showShareLinkModal}
+          onClose={() => { setShowShareLinkModal(false); setShareLinkTarget(null); }}
+          itemType={shareLinkTarget.type}
+          itemId={shareLinkTarget.id}
+          itemName={shareLinkTarget.name}
+        />
+      )}
     </div>
   );
 }

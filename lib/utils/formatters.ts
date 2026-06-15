@@ -61,6 +61,15 @@ export function getFileTypeInfo(mimeType: string) {
   return { label: 'FILE', iconColor: 'text-gray-500', badgeClass: 'bg-gray-100 text-gray-800' };
 }
 
+const FIVE_YEARS_MS = 5 * 365.25 * 24 * 60 * 60 * 1000;
+
+export function isFileInactive(file: { created_at: string; last_accessed_at?: string | null }): boolean {
+  const ref = file.last_accessed_at
+    ? new Date(file.last_accessed_at).getTime()
+    : new Date(file.created_at).getTime();
+  return Date.now() - ref > FIVE_YEARS_MS;
+}
+
 // Keep old function for backward compatibility (returns string for non-React usage)
 export function getFileIcon(mimeType: string): string {
   if (mimeType.startsWith('image/')) return '🖼️';

@@ -433,7 +433,8 @@ export function UserRoleAssignment() {
             ) : (
               filteredUsers.map((user) => {
                 const urs = userRoleMap[user.id] ?? [];
-                const primary = urs.find((ur) => ur.is_primary)?.role ?? user.role ?? null;
+                const primaryAssignment = urs.find((ur) => ur.is_primary);
+                const primary = primaryAssignment?.role ?? user.role ?? null;
                 const additionals = urs.filter((ur) => !ur.is_primary);
                 return (
                   <tr key={user.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50 last:border-b-0">
@@ -445,7 +446,14 @@ export function UserRoleAssignment() {
                         >
                           {user.name?.charAt(0)?.toUpperCase()}
                         </div>
-                        <span className="font-medium text-gray-900">{user.name}</span>
+                        <div>
+                          <span className="font-medium text-gray-900">{user.name}</span>
+                          {primaryAssignment?.assigned_at && (
+                            <p className="text-[11px] text-gray-400 leading-tight">
+                              {new Date(primaryAssignment.assigned_at).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500">{user.email}</td>
@@ -541,6 +549,11 @@ export function UserRoleAssignment() {
                       </div>
                       {a.description && editingAssignId !== a.id && (
                         <p className="mt-1 pl-5 text-xs text-blue-500 italic">↪ {a.description}</p>
+                      )}
+                      {a.assigned_at && (
+                        <p className="mt-1 pl-5 text-[11px] text-gray-400">
+                          Ditambahkan: {new Date(a.assigned_at).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
                       )}
                       {a.suspended_reason && (
                         <p className="mt-1 pl-5 text-xs italic text-red-500">↪ {a.suspended_reason}</p>
