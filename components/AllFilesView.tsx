@@ -17,6 +17,7 @@ import type { File as FileEntity } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
 import { ShareLinkModal } from './ShareLinkModal';
 import type { ShareItemType } from '@/types';
+import { canModifyFile } from '@/lib/utils/filePermissions';
 import toast from 'react-hot-toast';
 
 type FilterTab = 'my-files' | 'shared-files';
@@ -30,7 +31,7 @@ function buildFolderNameMap(nodes: any[], map: Map<string, string> = new Map()):
 }
 
 export function AllFilesView() {
-  const { user, roleVersion, hasPermission } = useAuthContext();
+  const { user, roleVersion, hasPermission, isAdmin, activeRoleId } = useAuthContext();
   const { folders } = useFolders(false);
   const folderNameMap = buildFolderNameMap(folders);
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
@@ -371,7 +372,7 @@ export function AllFilesView() {
                             <Download className="h-3.5 w-3.5" /> Download
                           </button>
                         )}
-                        {!isShared && hasPermission('file.delete') && (
+                        {!isShared && canModifyFile({ file, user, activeRoleId, isAdmin }) && (
                           <button
                             onClick={() => { setShareLinkTarget({ id: file.id, name: file.name, type: 'file' }); setShowShareLinkModal(true); }}
                             className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 transition-all hover:shadow-sm"

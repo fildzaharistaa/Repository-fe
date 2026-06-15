@@ -183,7 +183,7 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-orange-50 to-amber-50 px-6 py-4">
+          <div className="flex items-center justify-between border-b border-gray-100 bg-linear-to-r from-orange-50 to-amber-50 px-6 py-4">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100">
                 <Link2 className="h-5 w-5 text-orange-600" />

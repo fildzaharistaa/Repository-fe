@@ -15,8 +15,8 @@ import { ConfirmModal } from '../../../components/ConfirmModal';
 import { ShareLinkModal } from '../../../components/ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
-import toast from 'react-hot-toast';
 import { canModifyFile } from '@/lib/utils/filePermissions';
+import toast from 'react-hot-toast';
 
 interface FileListProps {
   folderId: string | null;
