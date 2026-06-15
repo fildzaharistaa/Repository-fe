@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api/client';
 import { ConfirmModal } from './ConfirmModal';
 import { FileIcon } from './FileIcon';
 import { formatDate, formatFileSize } from '@/lib/utils/formatters';
+import { useAuthContext } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
 interface TrashedFolder {
@@ -29,6 +30,7 @@ interface TrashedFile {
 type TrashedItem = (TrashedFolder | TrashedFile) & { itemType: 'folder' | 'file' };
 
 export function RecycleBinView() {
+  const { isAdmin } = useAuthContext();
   const [folders, setFolders] = useState<TrashedFolder[]>([]);
   const [files, setFiles] = useState<TrashedFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,15 +227,17 @@ export function RecycleBinView() {
                         )}
                         Restore
                       </button>
-                      <button
-                        onClick={() => handlePermanentDeleteClick(item.id, item.itemType, item.name)}
-                        disabled={actionLoading === item.id}
-                        className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm disabled:opacity-50"
-                        title="Hapus Permanen"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Hapus Permanen
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handlePermanentDeleteClick(item.id, item.itemType, item.name)}
+                          disabled={actionLoading === item.id}
+                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm disabled:opacity-50"
+                          title="Hapus Permanen"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Hapus Permanen
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

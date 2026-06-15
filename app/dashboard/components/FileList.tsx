@@ -43,12 +43,10 @@ export function FileList({ folderId }: FileListProps) {
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
   const [folderPermissions, setFolderPermissions] = useState<any[]>([]);
 
-  // Edit rights now come from dynamic permission slugs; legacy 'dosen/tendik' fallback retained for backward compat.
   const canUpload = hasPermission('file.upload');
   const canDelete = hasPermission('file.delete');
   const canDownload = hasPermission('file.download');
   const legacyDosenTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
-  const hasEditRights = isOwnerOrAdmin || canUpload || canDelete || legacyDosenTendik;
 
   const fetchFolderInfo = () => {
     if (folderId) {
@@ -574,7 +572,7 @@ export function FileList({ folderId }: FileListProps) {
                 Share
               </button>
             )}
-            {hasEditRights && (
+            {isOwnerOrAdmin && (
               <button
                 onClick={() => handleRenameClick(file)}
                 className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all hover:shadow-sm"
@@ -594,7 +592,7 @@ export function FileList({ folderId }: FileListProps) {
                 Download
               </button>
             )}
-            {hasEditRights && (
+            {canDelete && (
               <button
                 onClick={() => handleDelete(file)}
                 className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
@@ -631,7 +629,7 @@ export function FileList({ folderId }: FileListProps) {
                   <p className="text-sm text-gray-500">{files.length} file{files.length !== 1 ? 's' : ''} in this folder</p>
                 </div>
               </div>
-              {folderId && hasEditRights && (
+              {folderId && canUpload && (
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-lg"
