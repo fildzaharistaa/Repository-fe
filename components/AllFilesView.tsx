@@ -379,7 +379,7 @@ export function AllFilesView() {
                             <Link2 className="h-3.5 w-3.5" /> Link
                           </button>
                         )}
-                        {!isShared && (
+                        {!isShared && hasPermission('file.delete') && (
                           <button
                             onClick={() => handleDelete(file)}
                             className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"
