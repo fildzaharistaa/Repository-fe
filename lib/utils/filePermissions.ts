@@ -17,6 +17,7 @@ export function canModifyFile(args: {
   user: Pick<User, 'id'> | null;
   activeRoleId: string | null;
   isAdmin: boolean;
+  activeRoleIsPrivate?: boolean;
 }): boolean {
   if (args.isAdmin) return true;
   if (!args.user?.id) return false;
@@ -29,6 +30,17 @@ export function canModifyFile(args: {
   const activeRoleMatchesFolderRole =
     !folderRoleId || !args.activeRoleId || folderRoleId === args.activeRoleId;
   if (folderOwnerId && folderOwnerId === args.user.id && activeRoleMatchesFolderRole) return true;
+
+  // Non-private role workspace: any member whose active role matches the folder's
+  // owner role has the same modify rights as the folder creator — including over
+  // files uploaded by users from other roles who were granted access to the folder.
+  // Private roles (Dosen/Tendik) are excluded: their folders are individual workspaces.
+  if (
+    !args.activeRoleIsPrivate &&
+    folderRoleId != null &&
+    args.activeRoleId != null &&
+    folderRoleId === args.activeRoleId
+  ) return true;
 
   // Beyond folder-owner/admin, visibility is role-scoped: viewer's *active* role
   // must match the role the file was uploaded under. Same user with a different

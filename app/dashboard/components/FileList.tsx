@@ -42,7 +42,7 @@ export function FileList({ folderId }: FileListProps) {
   const [subfolders, setSubfolders] = useState<any[]>([]);
   const [uploaderSearch, setUploaderSearch] = useState('');
   const { user } = useAuth();
-  const { isAdmin, hasPermission, activeRoleId } = useAuthContext();
+  const { isAdmin, hasPermission, activeRoleId, isPrivateRole } = useAuthContext();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
   const [folderOwnerId, setFolderOwnerId] = useState<string | null>(null);
   const [folderRoleId, setFolderRoleId] = useState<string | null>(null);
@@ -585,6 +585,7 @@ export function FileList({ folderId }: FileListProps) {
               user,
               activeRoleId,
               isAdmin,
+              activeRoleIsPrivate: isPrivateRole,
             }) && (
               <>
                 <button
