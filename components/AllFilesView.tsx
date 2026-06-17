@@ -22,9 +22,18 @@ import toast from 'react-hot-toast';
 
 type FilterTab = 'my-files' | 'shared-files';
 
+function buildFolderNameMap(nodes: any[], map: Map<string, string> = new Map()): Map<string, string> {
+  for (const n of nodes) {
+    map.set(n.id, n.name);
+    if (n.children?.length) buildFolderNameMap(n.children, map);
+  }
+  return map;
+}
+
 export function AllFilesView() {
   const { user, roleVersion, hasPermission, isAdmin, activeRoleId } = useAuthContext();
   const { folders } = useFolders(false);
+  const folderNameMap = buildFolderNameMap(folders);
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
 
   const myOwnFiles = allFiles.filter(f => !f.owner_id || f.owner_id === user?.id);
@@ -287,12 +296,22 @@ export function AllFilesView() {
               {displayFiles.map((file) => {
                 const fileInfo = getFileTypeInfo(file.mime_type);
                 const isShared = activeTab === 'shared-files';
+                const folderName = isShared
+                  ? (file.folder?.name ?? null)
+                  : (folderNameMap.get(fileFolderMap.get(file.id) ?? '') ?? null);
                 return (
                   <tr key={file.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-6 py-4 relative">
+                      {isFileInactive(file) && <InactiveBadge />}
                       <div className="flex items-center">
                         <span className="mr-3"><FileIcon mimeType={file.mime_type} /></span>
                         <div>
+                          {folderName && (
+                            <p className="flex items-center gap-1 text-[10px] font-medium text-gray-400 mb-0.5">
+                              <Folder className="h-3 w-3" />
+                              {folderName}
+                            </p>
+                          )}
                           <button
                             onClick={() => handleQuickView(file)}
                             className="text-sm font-medium text-gray-900 hover:text-orange-600 transition-colors text-left"
@@ -301,11 +320,6 @@ export function AllFilesView() {
                             <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
                           </button>
                           <p className="text-xs text-gray-500">{fileInfo.label}</p>
-                          {isFileInactive(file) && (
-                            <div className="mt-0.5">
-                              <InactiveBadge />
-                            </div>
-                          )}
                         </div>
                       </div>
                     </td>
@@ -366,7 +380,7 @@ export function AllFilesView() {
                             <Link2 className="h-3.5 w-3.5" /> Link
                           </button>
                         )}
-                        {!isShared && (
+                        {!isShared && hasPermission('file.delete') && (
                           <button
                             onClick={() => handleDelete(file)}
                             className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm"

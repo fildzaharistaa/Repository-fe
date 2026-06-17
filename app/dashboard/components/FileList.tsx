@@ -527,7 +527,8 @@ export function FileList({ folderId }: FileListProps) {
     const fileInfo = getFileTypeInfo(file.mime_type);
     return (
       <tr key={file.id} className="hover:bg-gray-50 transition-colors">
-        <td className="whitespace-nowrap px-6 py-4">
+        <td className="whitespace-nowrap px-6 py-4 relative">
+          {isFileInactive(file) && <InactiveBadge />}
           <div className={`flex items-center ${isGrouped ? 'ml-4 border-l-2 border-orange-200 pl-4' : ''}`}>
             <span className="mr-3"><FileIcon mimeType={file.mime_type} /></span>
             <div>
@@ -539,11 +540,6 @@ export function FileList({ folderId }: FileListProps) {
                 <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
               </button>
               <p className="text-xs text-gray-500">{fileInfo.label}</p>
-              {isFileInactive(file) && (
-                <div className="mt-0.5">
-                  <InactiveBadge />
-                </div>
-              )}
               {(!isOwnerOrAdmin || legacyDosenTendik) && (file.uploaded_by || file.owner_name) && (
                 <div className="mt-1 flex items-center gap-1.5">
                   <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-100 text-[9px] font-bold text-orange-600">
