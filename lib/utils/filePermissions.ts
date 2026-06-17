@@ -13,7 +13,7 @@ export function canModifyFile(args: {
     | 'uploaded_by_role_id'
     | 'folder_owner_id'
   >;
-  folder?: Pick<Folder, 'owner_id'> | { owner_id?: string | null } | null;
+  folder?: { owner_id?: string | null; role_id?: string | null } | null;
   user: Pick<User, 'id'> | null;
   activeRoleId: string | null;
   isAdmin: boolean;
@@ -23,7 +23,12 @@ export function canModifyFile(args: {
 
   const folderOwnerId =
     args.folder?.owner_id ?? args.file.folder_owner_id ?? null;
-  if (folderOwnerId && folderOwnerId === args.user.id) return true;
+  const folderRoleId = args.folder?.role_id ?? null;
+  // Folder-owner shortcut only applies when the active role matches the folder's role context.
+  // Prevents multi-role users from getting modify rights via a folder they own under a different role.
+  const activeRoleMatchesFolderRole =
+    !folderRoleId || !args.activeRoleId || folderRoleId === args.activeRoleId;
+  if (folderOwnerId && folderOwnerId === args.user.id && activeRoleMatchesFolderRole) return true;
 
   // Beyond folder-owner/admin, visibility is role-scoped: viewer's *active* role
   // must match the role the file was uploaded under. Same user with a different

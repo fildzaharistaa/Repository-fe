@@ -45,6 +45,7 @@ export function FileList({ folderId }: FileListProps) {
   const { isAdmin, hasPermission, activeRoleId } = useAuthContext();
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(true);
   const [folderOwnerId, setFolderOwnerId] = useState<string | null>(null);
+  const [folderRoleId, setFolderRoleId] = useState<string | null>(null);
   const [folderPermissions, setFolderPermissions] = useState<any[]>([]);
 
   const canUpload = hasPermission('file.upload');
@@ -60,6 +61,7 @@ export function FileList({ folderId }: FileListProps) {
           setParentFolderId(folder.parent_id);
           const ownerId = folder.owner?.id || (folder as any).owner_id;
           setFolderOwnerId(ownerId ?? null);
+          setFolderRoleId(folder.role_id ?? null);
           const ownerOrAdmin = user?.id === ownerId || isAdmin;
           setIsOwnerOrAdmin(ownerOrAdmin);
 
@@ -75,6 +77,7 @@ export function FileList({ folderId }: FileListProps) {
           setSubfolders([]);
           setIsOwnerOrAdmin(false);
           setFolderOwnerId(null);
+          setFolderRoleId(null);
           setFolderPermissions([]);
         });
     } else {
@@ -82,6 +85,7 @@ export function FileList({ folderId }: FileListProps) {
       setSubfolders([]);
       setIsOwnerOrAdmin(true);
       setFolderOwnerId(null);
+      setFolderRoleId(null);
     }
   };
 
@@ -581,7 +585,7 @@ export function FileList({ folderId }: FileListProps) {
             </button>
             {canModifyFile({
               file,
-              folder: { owner_id: folderOwnerId ?? undefined },
+              folder: { owner_id: folderOwnerId ?? undefined, role_id: folderRoleId ?? undefined },
               user,
               activeRoleId,
               isAdmin,
