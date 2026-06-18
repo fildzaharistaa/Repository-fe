@@ -243,16 +243,26 @@ export function FileList({ folderId }: FileListProps) {
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   };
 
+  const getUserActiveRoles = (user: any): string[] => {
+    const fromUserRoles = (user.userRoles as any[])
+      ?.filter((ur: any) => ur.status === 'ACTIVE')
+      .map((ur: any) => formatRoleName(ur.role?.name))
+      .filter(Boolean);
+    if (fromUserRoles && fromUserRoles.length > 0) return fromUserRoles;
+    const primary = formatRoleName(typeof user.role === 'object' ? user.role?.name : user.role);
+    return primary ? [primary] : [];
+  };
+
   const roleStats = users.reduce((acc, user) => {
-    const rName = formatRoleName(typeof user.role === 'object' ? user.role?.name : user.role);
-    if (!acc[rName]) acc[rName] = 0;
-    acc[rName]++;
+    for (const r of getUserActiveRoles(user)) {
+      acc[r] = (acc[r] || 0) + 1;
+    }
     return acc;
   }, {} as Record<string, number>);
 
   const filteredUsers = users.filter(u => {
-    const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-    const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
+    const activeRoles = getUserActiveRoles(u);
+    const matchesRole = selectedRoleFilter ? activeRoles.includes(selectedRoleFilter) : true;
     const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
       (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
     return matchesRole && matchesSearch;
@@ -1183,14 +1193,16 @@ export function FileList({ folderId }: FileListProps) {
                           </tr>
                         ) : (
                           filteredUsers.map((u) => {
-                            const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+                            const activeRoles = getUserActiveRoles(u);
                             const perms = userPermissions[u.id] || { read: false, download: false };
                             return (
                               <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-3">
                                   <div className="font-medium text-gray-900">{u.name}</div>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
+                                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                    {activeRoles.map(r => (
+                                      <span key={r} className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{r}</span>
+                                    ))}
                                     <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
                                   </div>
                                 </td>
