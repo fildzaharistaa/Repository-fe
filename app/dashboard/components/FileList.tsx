@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, DragEvent, useMemo, Fragment } from 'react';
 import { useFolderContext } from '@/context/FolderContext';
-import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft, Link2 } from 'lucide-react';
+import { Eye, Download, Trash2, Folder, AlertCircle, FileText, X, Upload, Loader2, Edit2, Share2, Users, Search, ChevronDown, ChevronRight, ArrowLeft, Link2, Check } from 'lucide-react';
 import { useFiles } from '@/hooks/useFiles';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/context/AuthContext';
@@ -16,6 +16,14 @@ import { ShareLinkModal } from '../../../components/ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import type { File as FileEntity } from '@/types';
 import { canModifyFile } from '@/lib/utils/filePermissions';
+
+type UserRolePerm = {
+  userId: string;
+  roleId: string | null;
+  roleName: string;
+  read: boolean;
+  download: boolean;
+};
 import toast from 'react-hot-toast';
 
 interface FileListProps {
@@ -133,14 +141,15 @@ export function FileList({ folderId }: FileListProps) {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string | null>(null);
-  const [userPermissions, setUserPermissions] = useState<Record<string, { read: boolean, download: boolean }>>({});
+  const [userPermissions, setUserPermissions] = useState<Record<string, UserRolePerm>>({});
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   const [shareMessage, setShareMessage] = useState('');
 
   useEffect(() => {
     if (showShareModal && fileToShare) {
-      // Fetch users
-      apiClient.getUsers()
+      // Fetch users (up to 100 so the list isn't silently truncated)
+      apiClient.getUsers(1, 100)
         .then(res => {
           const fetchedUsers = (res as any).data || res;
           if (Array.isArray(fetchedUsers)) {
@@ -151,40 +160,24 @@ export function FileList({ folderId }: FileListProps) {
         })
         .catch(err => console.error('Failed to fetch users', err));
 
-      // Fetch existing shares for this file
+      // Fetch existing file-level shares (file_permissions table)
       apiClient.getFileShares(fileToShare.id)
         .then(shares => {
-          const perms: Record<string, { read: boolean, download: boolean }> = {};
+          const perms: Record<string, UserRolePerm> = {};
 
-          // First, pre-fill from folder-level user permissions (can_download)
-          folderPermissions.forEach((fp: any) => {
-            if (fp.user_id && fp.can_download) {
-              perms[fp.user_id] = {
-                read: true,
-                download: true
-              };
-            }
-          });
-
-          // Then, overlay with file-level shares (AccessRequest)
           if (Array.isArray(shares)) {
-            let msg = '';
-
             shares.forEach(s => {
-              if (s.requester && s.requester.id) {
-                // File-level share overrides folder-level if present
-                const existing = perms[s.requester.id];
-                perms[s.requester.id] = {
-                  read: !!s.can_read || (existing?.read ?? false),
-                  download: !!s.can_download || (existing?.download ?? false)
+              if (s.user_id) {
+                const key = `${s.user_id}::${s.role_id ?? 'null'}`;
+                perms[key] = {
+                  userId: s.user_id,
+                  roleId: s.role_id ?? null,
+                  roleName: s.role?.name ? formatRoleName(s.role.name) : '',
+                  read: !!s.can_read,
+                  download: !!s.can_download,
                 };
-                if (s.response_message && !msg) {
-                  msg = s.response_message;
-                }
               }
             });
-
-            if (msg) setShareMessage(msg);
           }
 
           setUserPermissions(perms);
@@ -243,36 +236,99 @@ export function FileList({ folderId }: FileListProps) {
     return raw.charAt(0).toUpperCase() + raw.slice(1);
   };
 
-  const roleStats = users.reduce((acc, user) => {
-    const rName = formatRoleName(typeof user.role === 'object' ? user.role?.name : user.role);
-    if (!acc[rName]) acc[rName] = 0;
-    acc[rName]++;
+  const getUserActiveRoles = (u: any): Array<{ roleId: string | null; roleName: string }> => {
+    const fromAssignments = (u.userRoles ?? [])
+      .filter((ur: any) => ur.status === 'ACTIVE' && ur.role)
+      .map((ur: any) => ({
+        roleId: (ur.role_id as string) ?? null,
+        roleName: formatRoleName(ur.role.name as string),
+      }));
+    if (fromAssignments.length > 0) return fromAssignments;
+    const primaryId = (u.role as any)?.id ?? u.role_id ?? null;
+    const primaryName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
+    return [{ roleId: primaryId, roleName: primaryName }];
+  };
+
+  const getUserRoleNames = (u: any): string[] =>
+    getUserActiveRoles(u).map((r) => r.roleName);
+
+  const roleStats = users.reduce((acc, u) => {
+    getUserRoleNames(u).forEach((rName) => {
+      if (!acc[rName]) acc[rName] = 0;
+      acc[rName]++;
+    });
     return acc;
   }, {} as Record<string, number>);
 
   const filteredUsers = users.filter(u => {
-    const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-    const matchesRole = selectedRoleFilter ? rName === selectedRoleFilter : true;
+    const matchesRole = selectedRoleFilter
+      ? getUserRoleNames(u).includes(selectedRoleFilter)
+      : true;
     const matchesSearch = u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
       (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()));
     return matchesRole && matchesSearch;
   });
 
-  const toggleUserPermission = (userId: string, perm: keyof { read: boolean, download: boolean }) => {
+  const toggleExpandUser = (userId: string) => {
+    setExpandedUsers(prev => {
+      const next = new Set(prev);
+      next.has(userId) ? next.delete(userId) : next.add(userId);
+      return next;
+    });
+  };
+
+  const handleToggleUser = (
+    u: any,
+    roleList: Array<{ roleId: string | null; roleName: string }>,
+  ) => {
+    const anySelected = roleList.some((r) => !!userPermissions[`${u.id}::${r.roleId ?? 'null'}`]);
+    if (anySelected) {
+      setUserPermissions(prev => {
+        const next = { ...prev };
+        Object.keys(next).filter(k => k.startsWith(`${u.id}::`)).forEach(k => delete next[k]);
+        return next;
+      });
+      setExpandedUsers(prev => { const next = new Set(prev); next.delete(u.id); return next; });
+    } else {
+      setUserPermissions(prev => {
+        const next = { ...prev };
+        roleList.forEach(r => {
+          next[`${u.id}::${r.roleId ?? 'null'}`] = {
+            userId: u.id,
+            roleId: r.roleId,
+            roleName: r.roleName,
+            read: true,
+            download: true,
+          };
+        });
+        return next;
+      });
+      if (roleList.length > 1) {
+        setExpandedUsers(prev => new Set([...prev, u.id]));
+      }
+    }
+  };
+
+  const toggleRolePermission = (userId: string, roleId: string | null, roleName: string) => {
+    const key = `${userId}::${roleId ?? 'null'}`;
     setUserPermissions(prev => {
-      const current = prev[userId] || { read: false, download: false };
-      const newValue = !current[perm];
-
-      if (perm === 'read' && !newValue) {
-        // Uncheck View → otomatis uncheck Download
-        return { ...prev, [userId]: { read: false, download: false } };
+      if (prev[key]) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
       }
-      if (perm === 'download' && newValue) {
-        // Check Download → otomatis check View
-        return { ...prev, [userId]: { read: true, download: true } };
-      }
+      return { ...prev, [key]: { userId, roleId, roleName, read: true, download: true } };
+    });
+  };
 
-      return { ...prev, [userId]: { ...current, [perm]: newValue } };
+  const toggleDownloadForUser = (userId: string) => {
+    setUserPermissions(prev => {
+      const userKeys = Object.keys(prev).filter(k => k.startsWith(`${userId}::`));
+      if (!userKeys.length) return prev;
+      const allDownload = userKeys.every(k => prev[k].download);
+      const next = { ...prev };
+      userKeys.forEach(k => { next[k] = { ...next[k], download: !allDownload }; });
+      return next;
     });
   };
 
@@ -282,6 +338,7 @@ export function FileList({ folderId }: FileListProps) {
     setUserSearchTerm('');
     setSelectedRoleFilter(null);
     setUserPermissions({});
+    setExpandedUsers(new Set());
     setShareMessage('');
   };
 
@@ -341,16 +398,12 @@ export function FileList({ folderId }: FileListProps) {
     try {
       setShareLoading(true);
 
-      const uPerms = Object.entries(userPermissions)
-        .map(([userId, perms]) => ({
-          user_id: userId,
-          can_read: perms.read,
-          can_create: false,
-          can_update: false,
-          can_delete: false,
-          can_download: perms.download
-        }))
-        .filter(p => p.can_read || p.can_download);
+      const uPerms = Object.values(userPermissions).map((entry) => ({
+        user_id: entry.userId,
+        role_id: entry.roleId,
+        can_read: entry.read,
+        can_download: entry.download,
+      }));
 
       if (uPerms.length === 0) {
         toast.error('Pilih minimal satu user untuk dibagikan file ini.');
@@ -360,12 +413,11 @@ export function FileList({ folderId }: FileListProps) {
 
       await apiClient.shareFile(fileToShare.id, {
         user_permissions: uPerms,
-        message: shareMessage.trim() || undefined
+        message: shareMessage.trim() || undefined,
       });
 
       toast.success(`File "${fileToShare.name}" berhasil dibagikan ke pengguna dan grup yang Anda pilih.`);
-      setShowShareModal(false);
-      setFileToShare(null);
+      resetShareModal();
     } catch (err) {
       toast.error('Gagal membagikan file');
     } finally {
@@ -1069,7 +1121,7 @@ export function FileList({ folderId }: FileListProps) {
                   <label className="mb-2 block text-sm font-semibold text-gray-700">Cara Berbagi</label>
                   <div className="rounded-lg bg-indigo-50 border border-indigo-100 p-3">
                     <p className="text-xs text-indigo-700 leading-relaxed">
-                      Centang user di tabel sebelah kanan untuk memberi akses <strong>View</strong> dan/atau <strong>Download</strong> pada file ini.
+                      Centang user untuk memberi akses <strong>View</strong> dan/atau <strong>Download</strong>. Untuk user dengan beberapa role, pilih role yang akan menerima akses — file hanya muncul saat user login dengan role tersebut.
                     </p>
                   </div>
                 </div>
@@ -1102,9 +1154,9 @@ export function FileList({ folderId }: FileListProps) {
 
                 {/* Selected users count */}
                 <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
-                  <p className="text-xs text-gray-500">User yang dipilih:</p>
+                  <p className="text-xs text-gray-500">Entri akses dipilih:</p>
                   <p className="text-lg font-bold text-indigo-600">
-                    {Object.values(userPermissions).filter(p => p.read).length} user
+                    {Object.keys(userPermissions).length} user/role
                   </p>
                 </div>
               </div>
@@ -1169,9 +1221,9 @@ export function FileList({ folderId }: FileListProps) {
                     <table className="w-full text-left text-sm text-gray-600">
                       <thead className="bg-gray-100 text-xs uppercase text-gray-700">
                         <tr>
-                          <th className="px-4 py-3 font-semibold">User Details</th>
-                          <th className="px-2 py-3 font-semibold text-center w-20">VIEW</th>
-                          <th className="px-2 py-3 font-semibold text-center w-24">DOWNLOAD</th>
+                          <th className="px-4 py-3 font-semibold">User</th>
+                          <th className="px-2 py-3 font-semibold text-center w-16">Akses</th>
+                          <th className="px-2 py-3 font-semibold text-center w-24">Download</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1183,24 +1235,108 @@ export function FileList({ folderId }: FileListProps) {
                           </tr>
                         ) : (
                           filteredUsers.map((u) => {
-                            const rName = formatRoleName(typeof u.role === 'object' ? u.role?.name : u.role);
-                            const perms = userPermissions[u.id] || { read: false, download: false };
+                            const roleList = getUserActiveRoles(u);
+                            const isMultiRole = roleList.length > 1;
+                            const isExpanded = expandedUsers.has(u.id);
+
+                            const selectedKeys = roleList
+                              .map((r) => `${u.id}::${r.roleId ?? 'null'}`)
+                              .filter((k) => !!userPermissions[k]);
+                            const anySelected = selectedKeys.length > 0;
+                            const downloadChecked =
+                              anySelected && selectedKeys.every((k) => userPermissions[k]?.download);
+
                             return (
-                              <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-4 py-3">
-                                  <div className="font-medium text-gray-900">{u.name}</div>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[10px] font-semibold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{rName}</span>
-                                    <span className="text-xs text-gray-500 truncate max-w-[150px]">{u.email}</span>
-                                  </div>
-                                </td>
-                                <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.read} onChange={() => toggleUserPermission(u.id, 'read')} className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer" />
-                                </td>
-                                <td className="px-2 py-3 text-center">
-                                  <input type="checkbox" checked={perms.download} onChange={() => toggleUserPermission(u.id, 'download')} className="h-4 w-4 rounded border-gray-300 text-orange-600 cursor-pointer" />
-                                </td>
-                              </tr>
+                              <Fragment key={u.id}>
+                                <tr className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
+                                        {u.name?.[0]?.toUpperCase() ?? '?'}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="text-sm font-medium text-gray-900">{u.name}</span>
+                                          {isMultiRole && (
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleExpandUser(u.id)}
+                                              className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 hover:bg-blue-100 transition-colors"
+                                            >
+                                              {roleList.length} roles {isExpanded ? '▲' : '▼'}
+                                            </button>
+                                          )}
+                                        </div>
+                                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                                          {roleList.map((r) => (
+                                            <span
+                                              key={r.roleId ?? 'null'}
+                                              className="inline-flex items-center rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600"
+                                            >
+                                              {r.roleName}
+                                            </span>
+                                          ))}
+                                          <span className="text-[10px] text-gray-400 truncate max-w-[130px]">{u.email}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-2 py-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={anySelected}
+                                      onChange={() => handleToggleUser(u, roleList)}
+                                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer"
+                                      title={anySelected ? 'Cabut akses' : isMultiRole ? 'Beri akses (pilih role di bawah)' : 'Beri akses'}
+                                    />
+                                  </td>
+                                  <td className="px-2 py-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={downloadChecked}
+                                      disabled={!anySelected}
+                                      onChange={() => toggleDownloadForUser(u.id)}
+                                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                      title={!anySelected ? 'Aktifkan akses terlebih dahulu' : 'Izinkan download'}
+                                    />
+                                  </td>
+                                </tr>
+                                {isMultiRole && isExpanded && (
+                                  <tr className="bg-blue-50/40 border-t border-blue-100">
+                                    <td colSpan={3} className="px-6 pb-3 pt-2">
+                                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-blue-600">
+                                        Pilih role yang mendapat akses:
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {roleList.map((r) => {
+                                          const key = `${u.id}::${r.roleId ?? 'null'}`;
+                                          const isRoleSelected = !!userPermissions[key];
+                                          return (
+                                            <button
+                                              key={r.roleId ?? 'null'}
+                                              type="button"
+                                              onClick={() => toggleRolePermission(u.id, r.roleId, r.roleName)}
+                                              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all ${
+                                                isRoleSelected
+                                                  ? 'border-indigo-400 bg-indigo-100 text-indigo-700 shadow-sm'
+                                                  : 'border-gray-300 bg-white text-gray-600 hover:border-indigo-300 hover:bg-indigo-50'
+                                              }`}
+                                            >
+                                              {isRoleSelected && <Check className="h-3 w-3 shrink-0" />}
+                                              {r.roleName}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      {anySelected && (
+                                        <p className="mt-2 text-[10px] text-gray-400">
+                                          File hanya muncul di "Shared Files" ketika user login menggunakan role yang dipilih.
+                                        </p>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
                             );
                           })
                         )}
@@ -1218,7 +1354,7 @@ export function FileList({ folderId }: FileListProps) {
                   </button>
                   <button
                     onClick={handleShareSubmit}
-                    disabled={shareLoading || Object.values(userPermissions).filter(p => p.read).length === 0}
+                    disabled={shareLoading || Object.keys(userPermissions).length === 0}
                     className="flex items-center gap-2 rounded-md bg-indigo-600 px-6 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {shareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}

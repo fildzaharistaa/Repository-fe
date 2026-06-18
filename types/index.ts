@@ -167,6 +167,34 @@ export interface FolderPermission {
   role?: Role | null;
 }
 
+// File Permission Types (user+role scoped, mirrors FolderPermission pattern)
+export interface FilePermission {
+  id: string;
+  file_id: string;
+  user_id: string | null;
+  role_id: string | null;
+  can_read: boolean;
+  can_download: boolean;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: { id: string; name: string; email: string } | null;
+  role?: { id: string; name: string } | null;
+}
+
+// Payload for sharing a file with specific (user, role) pairs
+export interface ShareFileUserPermEntry {
+  user_id: string;
+  role_id: string | null;
+  can_read?: boolean;
+  can_download?: boolean;
+}
+
+export interface ShareFilePayload {
+  user_permissions: ShareFileUserPermEntry[];
+  message?: string;
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   data?: T;

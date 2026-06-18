@@ -5,6 +5,8 @@ import type {
   FolderTreeNode,
   File as FileEntity,
   FolderPermission,
+  FilePermission,
+  ShareFilePayload,
   FolderOverviewItem,
   PaginatedResponse,
   LoginResponse,
@@ -346,16 +348,16 @@ class ApiClient {
 
   async shareFile(
     id: string,
-    data: { share_with_roles?: string[]; user_permissions?: any[]; message?: string }
-  ): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/access-requests/files/${id}/share`, {
+    data: ShareFilePayload,
+  ): Promise<{ message: string; count: number }> {
+    return this.request<{ message: string; count: number }>(`/access-requests/files/${id}/share`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async getFileShares(fileId: string): Promise<any[]> {
-    return this.request<any[]>(`/access-requests/files/${fileId}/shares`);
+  async getFileShares(fileId: string): Promise<FilePermission[]> {
+    return this.request<FilePermission[]>(`/access-requests/files/${fileId}/shares`);
   }
 
   async downloadFile(id: string): Promise<Blob> {
