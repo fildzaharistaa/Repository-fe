@@ -176,13 +176,6 @@ class ApiClient {
     });
   }
 
-  async importUsers(usersData: any[]): Promise<{ success: number; failed: number; errors: any[] }> {
-    return this.request<{ success: number; failed: number; errors: any[] }>('/users/import-excel', {
-      method: 'POST',
-      body: JSON.stringify(usersData)
-    });
-  }
-
   async updateUser(
     id: string,
     userData: Partial<{
@@ -468,31 +461,6 @@ class ApiClient {
   async deletePermission(id: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/permissions/${id}`, {
       method: 'DELETE',
-    });
-  }
-
-  // Fitur Asisten Cerdas (Chatbot AI)
-  async chatWithBot(message: string): Promise<{ response: string; timestamp: string }> {
-    return this.request<{ response: string; timestamp: string }>('/chatbot/chat', {
-      method: 'POST',
-      body: JSON.stringify({ message }),
-    });
-  }
-
-  async searchFolders(query: string): Promise<{
-    query: string;
-    results: Array<{
-      id: string;
-      name: string;
-      accessible: boolean;
-      roles_with_access: string[];
-      needs_admin_permission: boolean;
-    }>;
-    count: number;
-  }> {
-    return this.request('/chatbot/search', {
-      method: 'POST',
-      body: JSON.stringify({ query }),
     });
   }
 
