@@ -9,6 +9,8 @@ import { ShareLinkModal } from './ShareLinkModal';
 import { apiClient } from '@/lib/api/client';
 import { Eye, Download, FileText, Loader2, X, Link2, Clock } from 'lucide-react';
 import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatters';
+import { getDownloadErrorMessage } from '@/lib/utils/errorHandler';
+import toast from 'react-hot-toast';
 import type { File as FileEntity, ShareLink } from '@/types';
 
 type TabType = 'shared-with-me' | 'shared-by-me';
@@ -60,7 +62,7 @@ export function SharedFilesView() {
     try {
       await downloadFile(file.id, file.name);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to download file');
+      toast.error(getDownloadErrorMessage(err), { duration: 5000 });
     }
   };
 

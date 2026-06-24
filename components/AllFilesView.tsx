@@ -12,7 +12,7 @@ import { apiClient } from '@/lib/api/client';
 import { InactiveBadge } from './InactiveBadge';
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
-import { handleApiError } from '@/lib/utils/errorHandler';
+import { handleApiError, getDownloadErrorMessage } from '@/lib/utils/errorHandler';
 import type { File as FileEntity } from '@/types';
 import { ConfirmModal } from './ConfirmModal';
 import { ShareLinkModal } from './ShareLinkModal';
@@ -95,7 +95,7 @@ export function AllFilesView() {
         }
       }
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(getDownloadErrorMessage(err), { duration: 5000 });
     }
   };
 

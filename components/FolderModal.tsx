@@ -45,6 +45,8 @@ export function FolderModal({
   // Dynamic role sharing (group-level)
   const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
+  // Tracks which of the selected roles also have download permission enabled
+  const [roleDownloadIds, setRoleDownloadIds] = useState<Set<string>>(new Set());
 
   // Specific user permissions — keyed by "userId::roleId"
   const [users, setUsers] = useState<any[]>([]);
@@ -77,11 +79,13 @@ export function FolderModal({
       fetchUsers();
       if (editFolderId) {
         setSelectedRoleIds(new Set());
+        setRoleDownloadIds(new Set());
         setUserPermissions({});
         setExpandedUsers(new Set());
         fetchFolderDetails(editFolderId);
       } else {
         setSelectedRoleIds(new Set());
+        setRoleDownloadIds(new Set());
         setUserPermissions({});
         setExpandedUsers(new Set());
         setDefaultSubfolders([]);
@@ -108,6 +112,7 @@ export function FolderModal({
       const newPerms: Record<string, UserRolePerm> = {};
       const newExpanded = new Set<string>();
       const newSelectedIds = new Set<string>();
+      const newRoleDownloadIds = new Set<string>();
       const ownerWorkspaceRoleId = folder.role_id ?? null;
 
       if (folder.permissions) {
@@ -118,6 +123,10 @@ export function FolderModal({
           // Group-level role share
           if (perm.role && perm.role_id && perm.role_id !== ownerWorkspaceRoleId) {
             newSelectedIds.add(perm.role_id);
+            // Restore per-role download state from the existing permission record
+            if (perm.can_download) {
+              newRoleDownloadIds.add(perm.role_id);
+            }
           }
           // User-specific grant — key by (user_id, role_id) so multiple role
           // entries for the same user don't overwrite each other
@@ -141,6 +150,7 @@ export function FolderModal({
       }
 
       setSelectedRoleIds(newSelectedIds);
+      setRoleDownloadIds(newRoleDownloadIds);
       setUserPermissions(newPerms);
       setExpandedUsers(newExpanded);
     } catch (err) {
@@ -150,6 +160,20 @@ export function FolderModal({
 
   const toggleRoleId = (roleId: string) => {
     setSelectedRoleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(roleId)) {
+        next.delete(roleId);
+        // Also clear download when role is deselected
+        setRoleDownloadIds((d) => { const dn = new Set(d); dn.delete(roleId); return dn; });
+      } else {
+        next.add(roleId);
+      }
+      return next;
+    });
+  };
+
+  const toggleRoleDownload = (roleId: string) => {
+    setRoleDownloadIds((prev) => {
       const next = new Set(prev);
       next.has(roleId) ? next.delete(roleId) : next.add(roleId);
       return next;
@@ -167,9 +191,14 @@ export function FolderModal({
     try {
       setLoading(true);
 
-      const shareRoles = allRoles
-        .filter((r) => selectedRoleIds.has(r.id))
-        .map((r) => r.name);
+      const selectedRolesData = allRoles.filter((r) => selectedRoleIds.has(r.id));
+      const shareRoles = selectedRolesData.map((r) => r.name);
+
+      // Build role_download_map: roleId → can_download boolean
+      const roleDownloadMap: Record<string, boolean> = {};
+      selectedRolesData.forEach((r) => {
+        roleDownloadMap[r.id] = roleDownloadIds.has(r.id);
+      });
 
       // Build one permission record per (user, role) pair
       const uPerms = Object.values(userPermissions).map((entry) => ({
@@ -186,6 +215,7 @@ export function FolderModal({
         await apiClient.updateFolder(editFolderId, {
           name: folderName,
           share_with_roles: shareRoles,
+          role_download_map: roleDownloadMap,
           user_permissions: uPerms,
         });
         onSuccess(`Eksekusi pengaturan Folder "${folderName}" sukses diperbarui.`);
@@ -196,6 +226,7 @@ export function FolderModal({
           name: folderName,
           parent_id: parentId || undefined,
           share_with_roles: applySharing && shareRoles.length > 0 ? shareRoles : undefined,
+          role_download_map: applySharing && shareRoles.length > 0 ? roleDownloadMap : undefined,
           user_permissions: applySharing && uPerms.length > 0 ? uPerms : undefined,
           initial_subfolders: validSubfolders.length > 0 ? validSubfolders : undefined,
           ...(showPrivacyToggle && isShared && { is_shared_subfolder: true }),
@@ -438,51 +469,76 @@ export function FolderModal({
                 {allRoles.length === 0 ? (
                   <p className="text-xs text-gray-400 italic">Memuat role...</p>
                 ) : (
-                  <div className="space-y-1.5">
-                    {allRoles.map((role) => {
-                      const isChecked = selectedRoleIds.has(role.id);
-                      const isMyRole = role.id === myActiveRoleId;
-                      return (
-                        <div key={role.id} className="relative group">
-                          <label
-                            className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors ${
-                              isMyRole
-                                ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
-                                : isChecked
-                                ? 'border-orange-200 bg-orange-50 cursor-pointer'
-                                : 'border-gray-200 hover:bg-gray-50 cursor-pointer'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => !isMyRole && toggleRoleId(role.id)}
-                              disabled={isMyRole}
-                              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
-                            />
-                            <span
-                              className={`flex-1 font-medium ${
-                                isMyRole ? 'text-gray-400' : 'text-gray-700'
+                  <>
+                    {/* Column headers for Akses + Download */}
+                    <div className="mb-1 flex items-center gap-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                      <span className="flex-1" />
+                      <span className="w-12 text-center">Akses</span>
+                      <span className="w-16 text-center">Download</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {allRoles.map((role) => {
+                        const isChecked = selectedRoleIds.has(role.id);
+                        const isDownloadChecked = roleDownloadIds.has(role.id);
+                        const isMyRole = role.id === myActiveRoleId;
+                        return (
+                          <div key={role.id} className="relative group">
+                            <div
+                              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                                isMyRole
+                                  ? 'border-gray-200 bg-gray-50 opacity-60'
+                                  : isChecked
+                                  ? 'border-orange-200 bg-orange-50'
+                                  : 'border-gray-200 hover:bg-gray-50'
                               }`}
                             >
-                              {role.name}
-                            </span>
-                            {isMyRole && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 border border-gray-200">
-                                Role Aktif
+                              <span
+                                className={`flex-1 font-medium ${
+                                  isMyRole ? 'text-gray-400' : 'text-gray-700'
+                                }`}
+                              >
+                                {role.name}
                               </span>
-                            )}
-                          </label>
-                          {isMyRole && (
-                            <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
-                              Ini adalah role Anda saat ini. Folder ini sudah dapat diakses
-                              oleh role ini secara otomatis.
+                              {isMyRole ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500 border border-gray-200 w-12 justify-center">
+                                  Aktif
+                                </span>
+                              ) : (
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleRoleId(role.id)}
+                                  className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                                  title={isChecked ? 'Cabut akses' : 'Beri akses'}
+                                />
+                              )}
+                              {/* Download checkbox — only enabled when role is selected */}
+                              <input
+                                type="checkbox"
+                                checked={isDownloadChecked}
+                                disabled={isMyRole || !isChecked}
+                                onChange={() => !isMyRole && isChecked && toggleRoleDownload(role.id)}
+                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={
+                                  !isChecked
+                                    ? 'Aktifkan akses terlebih dahulu'
+                                    : isDownloadChecked
+                                    ? 'Nonaktifkan izin download'
+                                    : 'Izinkan download'
+                                }
+                              />
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            {isMyRole && (
+                              <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
+                                Ini adalah role Anda saat ini. Folder ini sudah dapat diakses
+                                oleh role ini secara otomatis.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             )}

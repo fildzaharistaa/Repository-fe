@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/context/AuthContext';
 import { formatFileSize, formatDate, getFileTypeInfo, isFileInactive } from '@/lib/utils/formatters';
 import { InactiveBadge } from '../../../components/InactiveBadge';
-import { handleApiError } from '@/lib/utils/errorHandler';
+import { handleApiError, getDownloadErrorMessage } from '@/lib/utils/errorHandler';
 import { FilePreview } from '../../../components/FilePreview';
 import { FileIcon } from '../../../components/FileIcon';
 import { ConfirmModal } from '../../../components/ConfirmModal';
@@ -301,7 +301,7 @@ export function FileList({ folderId }: FileListProps) {
     try {
       await downloadFile(file.id, file.name);
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(getDownloadErrorMessage(err), { duration: 5000 });
     }
   };
 
