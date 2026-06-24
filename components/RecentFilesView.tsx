@@ -9,7 +9,8 @@ import { formatFileSize, formatDate, getFileTypeInfo } from '@/lib/utils/formatt
 import { FileIcon } from './FileIcon';
 import { FilePreview } from './FilePreview';
 import { useFiles } from '@/hooks/useFiles';
-import { handleApiError } from '@/lib/utils/errorHandler';
+import { handleApiError, getDownloadErrorMessage } from '@/lib/utils/errorHandler';
+import toast from 'react-hot-toast';
 import type { File } from '@/types';
 
 export function RecentFilesView() {
@@ -42,13 +43,13 @@ export function RecentFilesView() {
         document.body.removeChild(a);
       }
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(getDownloadErrorMessage(err), { duration: 5000 });
     }
   };
 
   const handleDelete = async (file: File) => {
     if (!confirm(`Delete file "${file.name}"?`)) return;
-    
+
     try {
       const folderId = fileFolderMap.get(file.id);
       if (folderId) {
@@ -58,7 +59,7 @@ export function RecentFilesView() {
         }, 100);
       }
     } catch (err) {
-      alert(handleApiError(err));
+      toast.error(handleApiError(err));
     }
   };
 

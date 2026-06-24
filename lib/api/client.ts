@@ -226,6 +226,8 @@ class ApiClient {
     name: string;
     parent_id?: string | null;
     share_with_roles?: string[];
+    /** Maps role ID → can_download. Sent alongside share_with_roles. */
+    role_download_map?: Record<string, boolean>;
     user_permissions?: any[];
     initial_subfolders?: string[];
     is_shared_subfolder?: boolean;
@@ -238,7 +240,13 @@ class ApiClient {
 
   async updateFolder(
     id: string,
-    data: { name?: string; share_with_roles?: string[]; user_permissions?: any[] }
+    data: {
+      name?: string;
+      share_with_roles?: string[];
+      /** Maps role ID → can_download. Sent alongside share_with_roles. */
+      role_download_map?: Record<string, boolean>;
+      user_permissions?: any[];
+    }
   ): Promise<Folder> {
     return this.request<Folder>(`/folders/${id}`, {
       method: 'PATCH',
@@ -379,8 +387,22 @@ class ApiClient {
         }
       }
 
-      const errorText = await response.text().catch(() => 'Download failed');
-      throw new Error(errorText || `Download failed with status ${response.status}`);
+      // Parse JSON error response to extract just the message field, not the raw JSON string
+      let errorMessage: string;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          const json = await response.json();
+          errorMessage = Array.isArray(json.message)
+            ? json.message.join(', ')
+            : json.message || `Download failed with status ${response.status}`;
+        } catch {
+          errorMessage = `Download failed with status ${response.status}`;
+        }
+      } else {
+        errorMessage = (await response.text().catch(() => '')) || `Download failed with status ${response.status}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return response.blob();

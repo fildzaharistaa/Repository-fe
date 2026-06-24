@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { useAuthContext } from '@/context/AuthContext';
+import { getDownloadErrorMessage } from '@/lib/utils/errorHandler';
+import toast from 'react-hot-toast';
 import { File as FileEntity } from '@/types';
 
 interface FilePreviewProps {
@@ -160,7 +162,7 @@ export function FilePreview({ file, canDownload }: FilePreviewProps) {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(err.message || 'Gagal mengunduh file');
+      toast.error(getDownloadErrorMessage(err), { duration: 5000 });
     }
   };
 
