@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Folder, FileText, Users, Upload, Loader2,
+  Folder, FileText, Users, Upload,
   Check, X, HardDrive, ChevronRight,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
@@ -78,8 +78,6 @@ export function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activityFilter, setActivityFilter] = useState<'all' | 'superadmin' | 'user'>('all');
-  const [isImporting, setIsImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Settings
   const [maxDepthInput, setMaxDepthInput] = useState(5);
@@ -90,43 +88,6 @@ export function SuperAdminDashboard() {
   const [roleDepthInput, setRoleDepthInput] = useState(5);
   const [savingRoleDepth, setSavingRoleDepth] = useState(false);
   const [showDepthModal, setShowDepthModal] = useState(false);
-
-  // ── Excel import ──────────────────────────────────────────────────────
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      setIsImporting(true);
-      const toastId = toast.loading('Membaca file Excel...');
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          if (!data) throw new Error('Gagal membaca file');
-          const XLSX = await import('xlsx');
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rawData = XLSX.utils.sheet_to_json(sheet) as any[];
-          if (rawData.length === 0) { toast.error('File Excel kosong', { id: toastId }); return; }
-          toast.loading(`Memproses ${rawData.length} baris...`, { id: toastId });
-          const formattedData = rawData.map(row => ({
-            name: row.Nama || row.name || row.Name || 'Unknown',
-            email: row.Email || row.email || `${Math.random().toString(36).substring(7)}@upnvj.ac.id`,
-            role: row.Jabatan || row.Role || row.role || 'Tendik',
-          }));
-          const response = await apiClient.importUsers(formattedData);
-          toast.success(`Berhasil import ${response.success} user. Gagal: ${response.failed}`, { id: toastId });
-        } catch (err: any) {
-          toast.error(err.message || 'Error parse Excel', { id: toastId });
-        } finally {
-          setIsImporting(false);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-      };
-      reader.readAsBinaryString(file);
-    } catch { toast.error('Terjadi kesalahan sistem'); setIsImporting(false); }
-  };
 
   // ── Data fetch ────────────────────────────────────────────────────────
 
@@ -230,15 +191,6 @@ export function SuperAdminDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{dateLabel}</span>
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 disabled:opacity-50"
-          >
-            {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Import Excel
-          </button>
         </div>
       </div>
 

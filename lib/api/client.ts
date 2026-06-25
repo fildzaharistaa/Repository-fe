@@ -5,6 +5,8 @@ import type {
   FolderTreeNode,
   File as FileEntity,
   FolderPermission,
+  FilePermission,
+  ShareFilePayload,
   FolderOverviewItem,
   PaginatedResponse,
   LoginResponse,
@@ -171,13 +173,6 @@ class ApiClient {
     return this.request<User>('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
-    });
-  }
-
-  async importUsers(usersData: any[]): Promise<{ success: number; failed: number; errors: any[] }> {
-    return this.request<{ success: number; failed: number; errors: any[] }>('/users/import-excel', {
-      method: 'POST',
-      body: JSON.stringify(usersData)
     });
   }
 
@@ -354,16 +349,16 @@ class ApiClient {
 
   async shareFile(
     id: string,
-    data: { share_with_roles?: string[]; user_permissions?: any[]; message?: string }
-  ): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/access-requests/files/${id}/share`, {
+    data: ShareFilePayload,
+  ): Promise<{ message: string; count: number }> {
+    return this.request<{ message: string; count: number }>(`/access-requests/files/${id}/share`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async getFileShares(fileId: string): Promise<any[]> {
-    return this.request<any[]>(`/access-requests/files/${fileId}/shares`);
+  async getFileShares(fileId: string): Promise<FilePermission[]> {
+    return this.request<FilePermission[]>(`/access-requests/files/${fileId}/shares`);
   }
 
   async downloadFile(id: string): Promise<Blob> {
@@ -488,31 +483,6 @@ class ApiClient {
   async deletePermission(id: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/permissions/${id}`, {
       method: 'DELETE',
-    });
-  }
-
-  // Fitur Asisten Cerdas (Chatbot AI)
-  async chatWithBot(message: string): Promise<{ response: string; timestamp: string }> {
-    return this.request<{ response: string; timestamp: string }>('/chatbot/chat', {
-      method: 'POST',
-      body: JSON.stringify({ message }),
-    });
-  }
-
-  async searchFolders(query: string): Promise<{
-    query: string;
-    results: Array<{
-      id: string;
-      name: string;
-      accessible: boolean;
-      roles_with_access: string[];
-      needs_admin_permission: boolean;
-    }>;
-    count: number;
-  }> {
-    return this.request('/chatbot/search', {
-      method: 'POST',
-      body: JSON.stringify({ query }),
     });
   }
 
