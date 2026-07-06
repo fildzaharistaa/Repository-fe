@@ -15,6 +15,18 @@ Aplikasi web frontend untuk Campus Repository System FIK UPNVJ. Dibangun dengan 
 
 **URL Produksi:** `https://dashboard.repository-upnvj.online`
 
+> **Catatan:** Frontend ini memerlukan backend (`Repository-be`) yang sudah berjalan. Pastikan backend sudah di-deploy dan `NEXT_PUBLIC_API_BASE_URL` mengarah ke URL backend yang benar.
+
+---
+
+## Prerequisites
+
+| Software | Versi Minimum | Keterangan |
+|----------|--------------|------------|
+| **Node.js** | 18.x | Runtime JavaScript |
+| **npm** | 9.x | Package manager |
+| **Repository-be** | — | Backend harus sudah berjalan |
+
 ---
 
 ## Tech Stack
@@ -273,6 +285,27 @@ NEXT_PUBLIC_API_BASE_URL=https://api.repository-upnvj.online
 
 ---
 
+## Quick Start (Local Development)
+
+```bash
+# 1. Masuk ke direktori frontend
+cd Repository-fe
+
+# 2. Install dependencies
+npm install
+
+# 3. Salin template environment
+cp env.example .env
+# Isi NEXT_PUBLIC_API_BASE_URL=http://localhost:3031/api
+
+# 4. Jalankan development server
+npm run dev
+```
+
+Aplikasi berjalan di `http://localhost:3000`. Pastikan backend sudah berjalan di port `3031`.
+
+---
+
 ## Installation
 
 ```bash
@@ -381,6 +414,17 @@ server {
 
 ---
 
+## Scripts
+
+```bash
+npm run dev      # Development server di http://localhost:3000 (hot-reload)
+npm run build    # Build production ke .next/
+npm start        # Jalankan production server (perlu build dulu)
+npm run lint     # ESLint check
+```
+
+---
+
 ## State Management
 
 Aplikasi menggunakan React Context (bukan Redux):
@@ -428,3 +472,11 @@ Aplikasi menggunakan React Context (bukan Redux):
 ### Halaman Share Link Error 404
 **Penyebab:** Token share link sudah expired atau di-disable.
 **Solusi:** Minta pemilik file untuk generate ulang share link.
+
+### Backend Database Error (Prisma)
+**Penyebab:** `DATABASE_URL` di backend `.env` tidak dikonfigurasi atau salah format.
+**Solusi:** Pastikan file `.env` di `Repository-be/` memiliki variabel:
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/repository?schema=public
+```
+Kemudian jalankan `npx prisma generate` di direktori `Repository-be/` lalu restart server.
