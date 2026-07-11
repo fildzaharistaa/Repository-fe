@@ -99,7 +99,8 @@ function MoreMenu({ onNavigateAllFolders }: { onNavigateAllFolders: () => void }
 // ─── Expansion Panel ──────────────────────────────────────────────────────────
 
 function ExpansionPanel({ item }: { item: FolderOverviewItem }) {
-  const { children, loading } = useFolderChildren(item.id);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { children, loading } = useFolderChildren(item.id, refreshKey);
 
   return (
     <div className="border-t border-orange-100 bg-orange-50/40 rounded-b-xl overflow-hidden">
@@ -142,7 +143,13 @@ function ExpansionPanel({ item }: { item: FolderOverviewItem }) {
         {!loading && children.length > 0 && (
           <div className="space-y-0.5">
             {children.map((child) => (
-              <FolderChildNode key={child.id} item={child} depth={0} />
+              <FolderChildNode
+                key={child.id}
+                item={child}
+                depth={0}
+                parentId={item.id}
+                onMutated={() => setRefreshKey((k) => k + 1)}
+              />
             ))}
           </div>
         )}
