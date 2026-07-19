@@ -62,7 +62,7 @@ export function FolderModal({
 
   // Privat/Bagikan toggle — only for private-role users creating a subfolder
   const [isShared, setIsShared] = useState(false);
-  const showPrivacyToggle = !!parentId && isPrivateRole && !editFolderId;
+  const showPrivacyToggle = false;
 
   // Load roles once on mount
   useEffect(() => {
@@ -281,9 +281,11 @@ export function FolderModal({
     u: any,
     roleList: Array<{ roleId: string | null; roleName: string }>,
   ) => {
+    // Also check the null-role-id key ("userId::null") — permissions saved with role_id=null
+    // from DB are keyed this way and must count as "selected" to show the correct checked state.
     const anySelected = roleList.some(
       (r) => !!userPermissions[`${u.id}::${r.roleId ?? 'null'}`],
-    );
+    ) || !!userPermissions[`${u.id}::null`];
     if (anySelected) {
       // Deselect all roles and collapse
       setUserPermissions((prev) => {
@@ -701,10 +703,13 @@ export function FolderModal({
                         const isMultiRole = roleList.length > 1;
                         const isExpanded = expandedUsers.has(u.id);
 
-                        // Which role keys for this user are currently selected
-                        const selectedKeys = roleList
-                          .map((r) => `${u.id}::${r.roleId ?? 'null'}`)
-                          .filter((k) => !!userPermissions[k]);
+                        // Which role keys for this user are currently selected.
+                        // Also include the null-role-id key ("userId::null") which is how
+                        // user permissions saved with role_id=null appear after a DB reload.
+                        const selectedKeys = [
+                          ...roleList.map((r) => `${u.id}::${r.roleId ?? 'null'}`),
+                          `${u.id}::null`,
+                        ].filter((k, i, arr) => arr.indexOf(k) === i && !!userPermissions[k]);
                         const anySelected = selectedKeys.length > 0;
                         const downloadChecked =
                           anySelected && selectedKeys.every((k) => userPermissions[k]?.download);
