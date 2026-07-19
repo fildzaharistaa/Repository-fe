@@ -120,8 +120,11 @@ export function FolderModal({
         const userEntryCount: Record<string, number> = {};
 
         folder.permissions.forEach((perm: any) => {
-          // Group-level role share
-          if (perm.role && perm.role_id && perm.role_id !== ownerWorkspaceRoleId) {
+          // Group-level role share — only when there's no specific user attached.
+          // A row with BOTH role_id and user_id set is a user-specific grant scoped
+          // to that role context, not a role-wide share (see the "User-specific
+          // grant" branch below), so it must not also tick the group checkbox.
+          if (perm.role && perm.role_id && !perm.user_id && perm.role_id !== ownerWorkspaceRoleId) {
             newSelectedIds.add(perm.role_id);
             // Restore per-role download state from the existing permission record
             if (perm.can_download) {
