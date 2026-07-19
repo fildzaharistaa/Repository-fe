@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Link2, Copy, Check, RefreshCw, EyeOff,
-  Eye, Download, Clock, Loader2, AlertTriangle,
+  Eye, Download, Clock, Loader2, AlertTriangle, Calendar,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import type { ShareLink, ShareItemType, SharePermission } from '@/types';
@@ -31,7 +32,6 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
   const [disabling, setDisabling] = useState(false);
 
-  // Settings state
   const [permission, setPermission] = useState<SharePermission>('view');
   const [expiry, setExpiry] = useState<'never' | '1d' | '7d' | 'custom'>('never');
   const [customDate, setCustomDate] = useState('');
@@ -76,14 +76,10 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
   const computeExpiresAt = (): string | null => {
     if (expiry === 'never') return null;
     if (expiry === '1d') {
-      const d = new Date();
-      d.setDate(d.getDate() + 1);
-      return d.toISOString();
+      const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString();
     }
     if (expiry === '7d') {
-      const d = new Date();
-      d.setDate(d.getDate() + 7);
-      return d.toISOString();
+      const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString();
     }
     if (expiry === 'custom' && customDate) {
       return new Date(customDate + 'T23:59:59').toISOString();
@@ -95,15 +91,10 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
     setSaving(true);
     try {
       const newLink = await apiClient.generateShareLink({
-        type: itemType,
-        id: itemId,
-        access_level: 'anyone',
-        permission,
-        expires_at: computeExpiresAt(),
+        type: itemType, id: itemId, access_level: 'anyone',
+        permission, expires_at: computeExpiresAt(),
       });
-      if (!newLink?.token) {
-        throw new Error('Server tidak mengembalikan token yang valid');
-      }
+      if (!newLink?.token) throw new Error('Server tidak mengembalikan token yang valid');
       setLink(newLink);
       toast.success('Share link berhasil dibuat');
     } catch (err) {
@@ -118,10 +109,8 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
     setSaving(true);
     try {
       const updated = await apiClient.updateShareLink(link.token, {
-        access_level: 'anyone',
-        permission,
-        expires_at: computeExpiresAt(),
-        is_active: true,
+        access_level: 'anyone', permission,
+        expires_at: computeExpiresAt(), is_active: true,
       });
       setLink(updated);
       toast.success('Pengaturan share link diperbarui');
@@ -170,160 +159,162 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
 
   const isExpired = link?.expires_at ? new Date(link.expires_at) < new Date() : false;
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
         onClick={onClose}
       >
         <div
-          className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden"
+          className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-100 bg-linear-to-r from-orange-50 to-amber-50 px-6 py-4">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100">
-                <Link2 className="h-5 w-5 text-orange-600" />
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between border-b border-orange-100 bg-linear-to-r from-orange-50 to-amber-50 px-5 py-3.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                <Link2 className="h-4 w-4 text-orange-600" />
               </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900">Share Link</h3>
-                <p className="text-xs text-gray-500 truncate max-w-[240px]" title={itemName}>{itemName}</p>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-gray-900 leading-tight">Share Link</h3>
+                <p className="text-xs text-gray-500 truncate max-w-[220px]" title={itemName}>{itemName}</p>
               </div>
             </div>
-            <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-              <X className="h-5 w-5" />
+            <button
+              onClick={onClose}
+              className="ml-2 shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-white/70 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-4 w-4" />
             </button>
           </div>
 
           {loading ? (
-            <div className="flex h-48 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+            <div className="flex h-40 items-center justify-center">
+              <Loader2 className="h-7 w-7 animate-spin text-orange-400" />
             </div>
           ) : (
-            <div className="p-6 space-y-5">
-              {/* Link URL input */}
-              {link && !isExpired && (
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Share URL
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      readOnly
-                      value={buildShareUrl(link.token)}
-                      className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 focus:outline-none truncate"
-                    />
-                    <button
-                      onClick={handleCopy}
-                      className={`flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                        copied
-                          ? 'bg-green-500 text-white'
-                          : 'bg-orange-600 text-white hover:bg-orange-700'
-                      }`}
-                    >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      {copied ? 'Copied!' : 'Copy'}
-                    </button>
-                  </div>
+            <div className="max-h-[calc(100vh-10rem)] overflow-y-auto">
+              <div className="px-5 py-4 space-y-4">
 
-                  {/* Stats row */}
-                  <div className="mt-2 flex items-center gap-4 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Eye className="h-3 w-3" /> {link.view_count} views
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Download className="h-3 w-3" /> {link.download_count} downloads
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Expired warning */}
-              {link && isExpired && (
-                <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+                {/* Link URL */}
+                {link && !isExpired && (
                   <div>
-                    <p className="text-sm font-semibold text-amber-800">Link Kadaluarsa</p>
-                    <p className="text-xs text-amber-600">Link ini sudah tidak berlaku. Generate link baru untuk melanjutkan.</p>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">Share URL</p>
+                    <div className="flex gap-2">
+                      <input
+                        readOnly
+                        value={buildShareUrl(link.token)}
+                        className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 focus:outline-none truncate"
+                      />
+                      <button
+                        onClick={handleCopy}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                          copied ? 'bg-green-500 text-white' : 'bg-orange-600 text-white hover:bg-orange-700'
+                        }`}
+                      >
+                        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copied ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-3 text-[10px] text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Eye className="h-2.5 w-2.5" /> {link.view_count} views
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Download className="h-2.5 w-2.5" /> {link.download_count} downloads
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Expired warning */}
+                {link && isExpired && (
+                  <div className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-800">Link Kadaluarsa</p>
+                      <p className="text-[10px] text-amber-600">Generate link baru untuk melanjutkan.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Permission */}
+                <div>
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Permission</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: 'view', label: 'View only', icon: Eye, desc: 'Hanya bisa melihat' },
+                      { value: 'download', label: 'View & Download', icon: Download, desc: 'Bisa melihat & unduh' },
+                    ] as const).map(({ value, label, icon: Icon, desc }) => (
+                      <button
+                        key={value}
+                        onClick={() => setPermission(value)}
+                        className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${
+                          permission === value
+                            ? 'border-orange-400 bg-orange-50'
+                            : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/40'
+                        }`}
+                      >
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                          permission === value ? 'bg-orange-100' : 'bg-gray-100'
+                        }`}>
+                          <Icon className={`h-3.5 w-3.5 ${permission === value ? 'text-orange-600' : 'text-gray-400'}`} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-semibold leading-tight ${permission === value ? 'text-orange-700' : 'text-gray-700'}`}>
+                            {label}
+                          </p>
+                          <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{desc}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
 
-              {/* Permission */}
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Permission
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { value: 'view', label: 'View only', icon: Eye, desc: 'Hanya bisa melihat' },
-                    { value: 'download', label: 'View & Download', icon: Download, desc: 'Bisa melihat & unduh' },
-                  ] as const).map(({ value, label, icon: Icon, desc }) => (
-                    <button
-                      key={value}
-                      onClick={() => setPermission(value)}
-                      className={`flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all ${
-                        permission === value
-                          ? 'border-orange-400 bg-orange-50'
-                          : 'border-gray-200 bg-white hover:border-orange-200'
-                      }`}
-                    >
-                      <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${permission === value ? 'text-orange-600' : 'text-gray-400'}`} />
-                      <div>
-                        <p className={`text-xs font-semibold ${permission === value ? 'text-orange-700' : 'text-gray-700'}`}>{label}</p>
-                        <p className="text-[10px] text-gray-400">{desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                {/* Expiry */}
+                <div>
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Berlaku Hingga</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      { value: 'never', label: 'Tidak Kedaluwarsa', icon: Clock },
+                      { value: '1d',    label: '1 Hari',            icon: Clock },
+                      { value: '7d',    label: '7 Hari',            icon: Clock },
+                      { value: 'custom', label: 'Pilih Tanggal',    icon: Calendar },
+                    ] as const).map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setExpiry(value)}
+                        className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-all ${
+                          expiry === value
+                            ? 'border-orange-400 bg-orange-500 text-white shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-orange-200 hover:bg-orange-50'
+                        }`}
+                      >
+                        <Icon className="h-3 w-3 shrink-0" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {expiry === 'custom' && (
+                    <input
+                      type="date"
+                      value={customDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* Expiry */}
-              <div>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Berlaku Hingga
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    { value: 'never', label: 'Tidak Kedaluwarsa' },
-                    { value: '1d', label: '1 Hari' },
-                    { value: '7d', label: '7 Hari' },
-                    { value: 'custom', label: 'Pilih Tanggal' },
-                  ] as const).map(({ value, label }) => (
-                    <button
-                      key={value}
-                      onClick={() => setExpiry(value)}
-                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
-                        expiry === value
-                          ? 'border-orange-400 bg-orange-500 text-white'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-orange-300'
-                      }`}
-                    >
-                      <Clock className="h-3 w-3" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {expiry === 'custom' && (
-                  <input
-                    type="date"
-                    value={customDate}
-                    min={new Date().toISOString().slice(0, 10)}
-                    onChange={(e) => setCustomDate(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
-                  />
-                )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
+              {/* ── Footer actions ── */}
+              <div className="border-t border-gray-100 px-5 py-3.5 space-y-2 bg-gray-50/50">
                 <button
                   onClick={handleSaveSettings}
                   disabled={saving}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 transition-all"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 py-2.5 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-60 transition-all shadow-sm"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
                   {link ? 'Simpan Pengaturan' : 'Buat Share Link'}
@@ -334,19 +325,18 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
                     <button
                       onClick={handleRegenerate}
                       disabled={saving}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-all"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 transition-all"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
-                      Generate New Link
+                      New Token
                     </button>
-
                     <button
                       onClick={() => setShowDisableConfirm(true)}
                       disabled={saving}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60 transition-all"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 py-2 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60 transition-all"
                     >
                       <EyeOff className="h-3.5 w-3.5" />
-                      Disable Link
+                      Nonaktifkan
                     </button>
                   </div>
                 )}
@@ -365,6 +355,7 @@ export function ShareLinkModal({ open, onClose, itemType, itemId, itemName }: Sh
         onConfirm={handleDisable}
         onCancel={() => setShowDisableConfirm(false)}
       />
-    </>
+    </>,
+    document.body,
   );
 }

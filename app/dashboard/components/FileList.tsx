@@ -59,6 +59,7 @@ export function FileList({ folderId }: FileListProps) {
   const canUpload = hasPermission('file.upload');
   const canDelete = hasPermission('file.delete');
   const canDownload = hasPermission('file.download');
+  const canView = hasPermission('file.view');
   const legacyDosenTendik = user?.role?.name?.toLowerCase().includes('dosen') || user?.role?.name?.toLowerCase().includes('tendik');
 
   const fetchFolderInfo = () => {
@@ -122,6 +123,15 @@ export function FileList({ folderId }: FileListProps) {
   const [fileToRename, setFileToRename] = useState<FileEntity | null>(null);
   const [newFileName, setNewFileName] = useState('');
   const [renameLoading, setRenameLoading] = useState(false);
+
+  const [showSubfolderRenameModal, setShowSubfolderRenameModal] = useState(false);
+  const [subfolderToRename, setSubfolderToRename] = useState<any | null>(null);
+  const [newSubfolderName, setNewSubfolderName] = useState('');
+  const [subfolderRenameLoading, setSubfolderRenameLoading] = useState(false);
+
+  const [showSubfolderDeleteConfirm, setShowSubfolderDeleteConfirm] = useState(false);
+  const [subfolderToDelete, setSubfolderToDelete] = useState<any | null>(null);
+  const [subfolderDeleteLoading, setSubfolderDeleteLoading] = useState(false);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [fileToShare, setFileToShare] = useState<FileEntity | null>(null);
@@ -388,6 +398,52 @@ export function FileList({ folderId }: FileListProps) {
     }
   };
 
+  const canModifySubfolder = (subfolder: any): boolean =>
+    isOwnerOrAdmin || subfolder.owner_id === user?.id;
+
+  const handleSubfolderRenameClick = (subfolder: any) => {
+    setSubfolderToRename(subfolder);
+    setNewSubfolderName(subfolder.name);
+    setShowSubfolderRenameModal(true);
+  };
+
+  const confirmSubfolderRename = async () => {
+    if (!subfolderToRename || !newSubfolderName.trim()) return;
+    setSubfolderRenameLoading(true);
+    try {
+      await apiClient.updateFolder(subfolderToRename.id, { name: newSubfolderName.trim() });
+      toast.success(`Folder berhasil diganti nama menjadi "${newSubfolderName.trim()}"`);
+      setShowSubfolderRenameModal(false);
+      setSubfolderToRename(null);
+      fetchFolderInfo();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal mengganti nama folder');
+    } finally {
+      setSubfolderRenameLoading(false);
+    }
+  };
+
+  const handleSubfolderDeleteClick = (subfolder: any) => {
+    setSubfolderToDelete(subfolder);
+    setShowSubfolderDeleteConfirm(true);
+  };
+
+  const confirmSubfolderDelete = async () => {
+    if (!subfolderToDelete) return;
+    setSubfolderDeleteLoading(true);
+    try {
+      await apiClient.deleteFolder(subfolderToDelete.id);
+      toast.success('Folder dipindahkan ke Recycle Bin');
+      setShowSubfolderDeleteConfirm(false);
+      setSubfolderToDelete(null);
+      fetchFolderInfo();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus folder');
+    } finally {
+      setSubfolderDeleteLoading(false);
+    }
+  };
+
   const handleShareClick = (file: FileEntity) => {
     setFileToShare(file);
     setShowShareModal(true);
@@ -585,8 +641,8 @@ export function FileList({ folderId }: FileListProps) {
             <span className="mr-3"><FileIcon mimeType={file.mime_type} /></span>
             <div>
               <button
-                onClick={() => handleQuickView(file)}
-                className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left"
+                onClick={() => canView && handleQuickView(file)}
+                className={`text-sm font-medium text-gray-900 transition-colors text-left ${canView ? 'hover:text-blue-600 cursor-pointer' : 'cursor-default'}`}
                 title={file.name}
               >
                 <span className="block truncate max-w-[150px] sm:max-w-[200px] md:max-w-[300px] lg:max-w-sm">{file.name}</span>
@@ -623,14 +679,16 @@ export function FileList({ folderId }: FileListProps) {
         </td>
         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
           <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => handleQuickView(file)}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-all hover:shadow-sm"
-              title="Quick View"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              View
-            </button>
+            {canView && (
+              <button
+                onClick={() => handleQuickView(file)}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-all hover:shadow-sm"
+                title="Quick View"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                View
+              </button>
+            )}
             {canModifyFile({
               file,
               folder: { owner_id: folderOwnerId ?? undefined, role_id: folderRoleId ?? undefined },
@@ -814,7 +872,27 @@ export function FileList({ folderId }: FileListProps) {
                             {formatDate(subfolder.created_at)}
                           </td>
                           <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                            <div className="flex items-center justify-end">
+                            <div className="flex items-center justify-end gap-1">
+                              {canModifySubfolder(subfolder) && (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleSubfolderRenameClick(subfolder); }}
+                                    className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-all opacity-0 group-hover:opacity-100"
+                                    title="Rename folder"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                    Rename
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleSubfolderDeleteClick(subfolder); }}
+                                    className="flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-all opacity-0 group-hover:opacity-100"
+                                    title="Hapus folder"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Hapus
+                                  </button>
+                                </>
+                              )}
                               <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
                             </div>
                           </td>
@@ -1429,6 +1507,63 @@ export function FileList({ folderId }: FileListProps) {
           itemName={shareLinkFile.name}
         />
       )}
+
+      {/* Subfolder Rename Modal */}
+      {showSubfolderRenameModal && subfolderToRename && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20 p-4 backdrop-blur-md"
+          onClick={() => !subfolderRenameLoading && setShowSubfolderRenameModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Ganti Nama Folder</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Folder</label>
+              <input
+                type="text"
+                value={newSubfolderName}
+                onChange={(e) => setNewSubfolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmSubfolderRename();
+                  if (e.key === 'Escape') setShowSubfolderRenameModal(false);
+                }}
+                autoFocus
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-black focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100 sm:text-sm"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowSubfolderRenameModal(false)}
+                disabled={subfolderRenameLoading}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmSubfolderRename}
+                disabled={subfolderRenameLoading || !newSubfolderName.trim()}
+                className="flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+              >
+                {subfolderRenameLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subfolder Delete Confirmation */}
+      <ConfirmModal
+        open={showSubfolderDeleteConfirm}
+        title="Hapus Folder"
+        description={`Apakah Anda yakin ingin menghapus folder "${subfolderToDelete?.name}"? Folder beserta subfolder dan file di dalamnya akan dipindahkan ke Recycle Bin.`}
+        confirmText="Hapus"
+        loading={subfolderDeleteLoading}
+        onCancel={() => { setShowSubfolderDeleteConfirm(false); setSubfolderToDelete(null); }}
+        onConfirm={confirmSubfolderDelete}
+      />
     </>
   );
 }

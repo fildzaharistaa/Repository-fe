@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type { FolderOverviewItem } from '@/types';
 
@@ -8,16 +8,23 @@ import type { FolderOverviewItem } from '@/types';
 // Stores fetched children per folderId so repeated expand/collapse doesn't re-fetch.
 const childrenCache = new Map<string, FolderOverviewItem[]>();
 
-export function useFolderChildren(folderId: string | null) {
+export function useFolderChildren(folderId: string | null, refreshKey: number = 0) {
   const [children, setChildren] = useState<FolderOverviewItem[]>(() =>
     folderId ? (childrenCache.get(folderId) ?? []) : [],
   );
   const [loading, setLoading] = useState(false);
+  const prevRefreshKeyRef = useRef(0);
 
   useEffect(() => {
     if (!folderId) {
       setChildren([]);
       return;
+    }
+
+    // When refreshKey increments, invalidate the cache entry to force a re-fetch
+    if (refreshKey !== prevRefreshKeyRef.current) {
+      prevRefreshKeyRef.current = refreshKey;
+      childrenCache.delete(folderId);
     }
 
     // Serve from cache when available
@@ -46,7 +53,7 @@ export function useFolderChildren(folderId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [folderId]);
+  }, [folderId, refreshKey]);
 
   // Call this after a mutation (create/delete folder) to force a re-fetch
   const invalidate = useCallback((id: string) => {

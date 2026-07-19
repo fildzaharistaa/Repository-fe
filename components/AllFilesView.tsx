@@ -36,7 +36,10 @@ export function AllFilesView() {
   const folderNameMap = buildFolderNameMap(folders);
   const { allFiles, fileFolderMap, loading: myLoading, error: myError } = useAllFiles(folders);
 
-  const myOwnFiles = allFiles.filter(f => !f.owner_id || f.owner_id === user?.id);
+  const myOwnFiles = allFiles.filter(f =>
+    (!f.owner_id || f.owner_id === user?.id) &&
+    (!f.uploaded_by_role_id || f.uploaded_by_role_id === activeRoleId)
+  );
   const { files: sharedFiles, loading: sharedLoading, error: sharedError, downloadFile: downloadShared } = useSharedFiles(roleVersion);
   
   const [activeTab, setActiveTab] = useState<FilterTab>('my-files');
