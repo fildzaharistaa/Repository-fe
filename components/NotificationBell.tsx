@@ -44,7 +44,7 @@ type UpdateNotif = {
 };
 
 export function NotificationBell() {
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, activeRoleId } = useAuthContext();
 
   const [open, setOpen] = useState(false);
   const [showExpandedBadge, setShowExpandedBadge] = useState(false);
@@ -95,7 +95,7 @@ export function NotificationBell() {
   const fetchNotifications = useCallback(async () => {
     try {
       const [accessResult, reactivationResult] = await Promise.allSettled([
-        apiClient.getNotifications(),
+        apiClient.getNotifications(activeRoleId ?? undefined),
         isAdmin ? apiClient.saGetPendingReactivations() : Promise.resolve([] as UserRole[]),
       ]);
       if (accessResult.status === 'fulfilled') {
@@ -111,7 +111,7 @@ export function NotificationBell() {
       setLoading(false);
       setIsFirstFetchDone(true);
     }
-  }, [isAdmin]);
+  }, [isAdmin, activeRoleId]);
 
   useEffect(() => {
     fetchNotifications();

@@ -586,7 +586,7 @@ class ApiClient {
   }
 
   // Mengambil Data Notifikasi Lonceng (Bell)
-  async getNotifications(): Promise<{
+  async getNotifications(activeRoleId?: string): Promise<{
     incoming: Array<{
       id: number;
       type: 'incoming';
@@ -610,7 +610,8 @@ class ApiClient {
       createdAt: string;
     }>;
   }> {
-    return this.request('/access-requests/notifications');
+    const qs = activeRoleId ? `?role_id=${encodeURIComponent(activeRoleId)}` : '';
+    return this.request(`/access-requests/notifications${qs}`);
   }
 
   // Recycle Bin
