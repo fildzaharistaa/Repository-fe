@@ -27,6 +27,7 @@ import Image from 'next/image';
 import logoImage from '@/app/icon.png';
 import { useFolders } from '@/hooks/useFolders';
 import { useSharedFolders } from '@/hooks/useSharedFolders';
+import { useSharedFiles } from '@/hooks/useSharedFiles';
 import { useAuthContext } from '@/context/AuthContext';
 import { useFolderContext } from '@/context/FolderContext';
 import type { FolderTreeNode } from '@/types';
@@ -190,6 +191,7 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   const [adminMode, setAdminMode] = useState(false);
   const { folders, loading, error, createFolder, deleteFolder, refresh } = useFolders(adminMode && isAdmin, roleVersion);
   const { folders: sharedFolders } = useSharedFolders(roleVersion);
+  const { files: sharedFiles } = useSharedFiles(roleVersion);
 
   // Reset workspace state whenever the active role changes
   useEffect(() => {
@@ -200,8 +202,8 @@ export function FolderTree({ selectedFolderId, onFolderSelect }: FolderTreeProps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleVersion]);
 
-  // Computed: user has shared access if any folders are shared with them
-  const hasSharedAccess = sharedFolders.length > 0;
+  // Computed: user has shared access if any folders OR files are shared with them
+  const hasSharedAccess = sharedFolders.length > 0 || sharedFiles.length > 0;
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [parentId, setParentId] = useState<string | null>(null);
