@@ -60,8 +60,16 @@ export function SharedFoldersView() {
     }
   }, [activeTab, showShareLinkModal]);
 
-  const uniqueRoles = Array.from(new Set(folders.map((f: any) => f.owner_role).filter(Boolean)));
-  const filteredFolders = folders.filter((f: any) =>
+  // getSharedFolderTree() returns a nested tree (each node may have children).
+  // This view renders a flat grid of cards, so flatten every level into one
+  // list — otherwise a shared subfolder whose parent is also accessible gets
+  // nested under it and never gets its own card.
+  const flattenFolders = (nodes: any[]): any[] =>
+    nodes.flatMap((f) => [f, ...(f.children?.length ? flattenFolders(f.children) : [])]);
+  const allFolders = flattenFolders(folders);
+
+  const uniqueRoles = Array.from(new Set(allFolders.map((f: any) => f.owner_role).filter(Boolean)));
+  const filteredFolders = allFolders.filter((f: any) =>
     roleFilter === 'all' || f.owner_role === roleFilter
   );
 
@@ -139,7 +147,7 @@ export function SharedFoldersView() {
           <Folder className="h-4 w-4" />
           Dibagikan ke Saya
           <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${activeTab === 'shared-with-me' ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-500'}`}>
-            {folders.length}
+            {allFolders.length}
           </span>
         </button>
         <button
