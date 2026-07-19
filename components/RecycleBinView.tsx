@@ -6,7 +6,6 @@ import { apiClient } from '@/lib/api/client';
 import { ConfirmModal } from './ConfirmModal';
 import { FileIcon } from './FileIcon';
 import { formatDate, formatFileSize } from '@/lib/utils/formatters';
-import { useAuthContext } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
 interface TrashedFolder {
@@ -30,7 +29,6 @@ interface TrashedFile {
 type TrashedItem = (TrashedFolder | TrashedFile) & { itemType: 'folder' | 'file' };
 
 export function RecycleBinView() {
-  const { isAdmin } = useAuthContext();
   const [folders, setFolders] = useState<TrashedFolder[]>([]);
   const [files, setFiles] = useState<TrashedFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +38,10 @@ export function RecycleBinView() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<{ id: string; type: 'file' | 'folder'; name: string } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  // Selection state for bulk delete
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showConfirmSelected, setShowConfirmSelected] = useState(false);
+  const [confirmSelectedLoading, setConfirmSelectedLoading] = useState(false);
 
   const fetchTrashed = useCallback(async () => {
     try {
@@ -102,6 +104,42 @@ export function RecycleBinView() {
     }
   };
 
+  const toggleSelected = (key: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (allKeys: string[]) => {
+    setSelected((prev) =>
+      prev.size === allKeys.length ? new Set() : new Set(allKeys)
+    );
+  };
+
+  const confirmDeleteSelected = async () => {
+    try {
+      setConfirmSelectedLoading(true);
+      for (const key of selected) {
+        const [itemType, id] = key.split('::');
+        if (itemType === 'file') {
+          await apiClient.permanentDeleteFile(id);
+        } else {
+          await apiClient.permanentDeleteFolder(id);
+        }
+      }
+      toast.success(`${selected.size} item berhasil dihapus permanen.`);
+      setShowConfirmSelected(false);
+      setSelected(new Set());
+      await fetchTrashed();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menghapus item terpilih');
+    } finally {
+      setConfirmSelectedLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -131,10 +169,12 @@ export function RecycleBinView() {
   ].sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
 
   const isEmpty = allItems.length === 0;
+  const allKeys = allItems.map((item) => `${item.itemType}::${item.id}`);
+  const allSelected = allKeys.length > 0 && selected.size === allKeys.length;
 
   return (
     <div className="space-y-4">
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-red-100 p-2">
             <Trash2 className="h-6 w-6 text-red-600" />
@@ -148,6 +188,16 @@ export function RecycleBinView() {
             </p>
           </div>
         </div>
+        {!isEmpty && (
+          <button
+            onClick={() => setShowConfirmSelected(true)}
+            disabled={selected.size === 0}
+            className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Hapus Terpilih {selected.size > 0 ? `(${selected.size})` : ''}
+          </button>
+        )}
       </div>
 
       {isEmpty ? (
@@ -165,6 +215,15 @@ export function RecycleBinView() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => toggleSelectAll(allKeys)}
+                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                    title="Pilih semua"
+                  />
+                </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Nama
                 </th>
@@ -183,8 +242,18 @@ export function RecycleBinView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {allItems.map((item) => (
-                <tr key={`${item.itemType}-${item.id}`} className="hover:bg-gray-50 transition-colors">
+              {allItems.map((item) => {
+                const key = `${item.itemType}::${item.id}`;
+                return (
+                <tr key={key} className="hover:bg-gray-50 transition-colors">
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(key)}
+                      onChange={() => toggleSelected(key)}
+                      className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center gap-3">
                       {item.itemType === 'folder' ? (
@@ -227,21 +296,20 @@ export function RecycleBinView() {
                         )}
                         Restore
                       </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => handlePermanentDeleteClick(item.id, item.itemType, item.name)}
-                          disabled={actionLoading === item.id}
-                          className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm disabled:opacity-50"
-                          title="Hapus Permanen"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Hapus Permanen
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handlePermanentDeleteClick(item.id, item.itemType, item.name)}
+                        disabled={actionLoading === item.id}
+                        className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-all hover:shadow-sm disabled:opacity-50"
+                        title="Hapus Permanen"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Hapus Permanen
+                      </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -258,6 +326,16 @@ export function RecycleBinView() {
           setConfirmTarget(null);
         }}
         onConfirm={confirmPermanentDelete}
+      />
+
+      <ConfirmModal
+        open={showConfirmSelected}
+        title="Hapus Terpilih"
+        description={`Apakah Anda yakin ingin menghapus ${selected.size} item terpilih secara permanen? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Hapus Terpilih"
+        loading={confirmSelectedLoading}
+        onCancel={() => setShowConfirmSelected(false)}
+        onConfirm={confirmDeleteSelected}
       />
 
     </div>
