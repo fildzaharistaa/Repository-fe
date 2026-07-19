@@ -16,6 +16,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '@/lib/api/client';
 import { useAuthContext } from '@/context/AuthContext';
 import type { UserRole } from '@/types';
+import toast from 'react-hot-toast';
 
 type IncomingNotif = {
   id: number;
@@ -148,10 +149,22 @@ export function NotificationBell() {
     }
 
     const newIncoming = incoming.filter(c => !prevIncomingRef.current.some(p => p.id === c.id));
+    const newUpdates = updates.filter(c => !prevUpdatesRef.current.some(p => p.id === c.id && p.type === c.type));
     const newReactivations = pendingReactivations.filter(c => !prevReactivationsRef.current.some(p => p.id === c.id));
     prevIncomingRef.current = incoming;
     prevUpdatesRef.current = updates;
     prevReactivationsRef.current = pendingReactivations;
+
+    for (const notif of newIncoming) {
+      toast(`${notif.requesterName} meminta akses "${notif.resourceName}"`, { icon: '📩' });
+    }
+    for (const notif of newUpdates) {
+      if (notif.status === 'approved') {
+        toast.success(`Request akses "${notif.resourceName}" disetujui`);
+      } else if (notif.status === 'rejected') {
+        toast.error(`Request akses "${notif.resourceName}" ditolak`);
+      }
+    }
 
     if (newIncoming.length > 0 || newReactivations.length > 0) {
       triggerExpandedBadge();
@@ -170,10 +183,16 @@ export function NotificationBell() {
   const executeApprove = async (id: number, permissions: typeof selectedPermissions) => {
     setActionLoading(id);
     try {
+      const notif = incoming.find(n => n.id === id);
       await apiClient.approveAccessRequest(id, { ...permissions, response_message: approveMessage.trim() || undefined });
       setIncoming(prev => prev.filter(n => n.id !== id));
       setShowPermissionModal(null);
       setApproveMessage('');
+      toast.success(
+        notif
+          ? `Akses "${notif.resourceName}" untuk ${notif.requesterName} disetujui`
+          : 'Request akses disetujui'
+      );
     } catch { /* skip */ }
     finally { setActionLoading(null); }
   };

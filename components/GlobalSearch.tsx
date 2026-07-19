@@ -5,6 +5,7 @@ import { Search, Loader2, FolderIcon, FileIcon, X, MessageCircle } from 'lucide-
 import { apiClient } from '@/lib/api/client';
 import { useRouter } from 'next/navigation';
 import { useFolderContext } from '@/context/FolderContext';
+import toast from 'react-hot-toast';
 
 type SearchItem = {
   id: string;
@@ -105,6 +106,7 @@ export function GlobalSearch() {
 
       // Update local state to show 'pending'
       setResults(prev => prev.map(r => r.id === requestTarget.id ? { ...r, requestStatus: 'pending' } : r));
+      toast.success(`Request akses "${requestTarget.name}" berhasil dikirim`);
       setShowRequestModal(false);
       setRequestTarget(null);
       setRequestMessage('');
